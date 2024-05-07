@@ -1,0 +1,45 @@
+{
+	"driver_id": "uc_panasonicbluray_driver",
+	"version": "0.0.1",
+	"min_core_api": "0.20.0",
+	"name": { "en": "Panasonic Bluray" },
+	"icon": "custom:panasonic.png",
+    "port": 9091,
+	"description": {
+		"en": "Control your Panasonic Bluray with Remote Two.",
+		"de": "Steuere Panasonic Bluray mit Remote Two.",
+		"fr": "Contrôler votre Panasonic Bluray avec Remote Two."
+	},
+	"developer": {
+		"name": "Unfolded Circle ApS",
+		"email": "hello@unfoldedcircle.com",
+		"url": "https://www.unfoldedcircle.com"
+	},
+	"home_page": "https://www.unfoldedcircle.com",
+	"setup_data_schema": {
+		"title": {
+			"en": "Integration setup",
+			"de": "Integrationssetup",
+			"fr": "Configuration de l'intégration"
+		},
+		"settings": [
+			{
+				"id": "info",
+				"label": {
+					"en": "Setup process",
+					"de": "Setup Fortschritt",
+					"fr": "Progression de la configuration"
+				},
+				"field": {
+					"label": {
+						"value": {
+							"en": "The integration will discover your Panasonic Bluray on your network. Please make sure that your Panasonic Bluray is powered on and that no old pairing request is shown.\nIf pairing continuously fails, restart your Panasonic Bluray and try again.",
+                            "fr": "L'intégration découvrira votre lecteur Bluray Panasonic sur votre réseau.\nSi l'appairage échoue systématiquement, redémarrez votre lecteur Panasonic Bluray et réessayez"
+						}
+					}
+				}
+			}
+		]
+	},
+	"release_date": "2024-05-07"
+}
