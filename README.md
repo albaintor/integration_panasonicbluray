@@ -3,29 +3,35 @@
 Using [uc-integration-api](https://github.com/aitatoi/integration-python-library)
 
 The driver discovers Panasonic Bluray players on the network. A media player and a remote entity are exposed to the core.
+The remote entity su
 
 Supported attributes:
 
 - State (on, off, playing, paused, unknown)
-- Title
-- Album
-- Artist
-- Artwork
-- Source (channel selection)
+- Media position
+- Media duration
 
-Supported commands:
+Supported commands for media player :
 
 - Turn on
 - Turn off
-- Next (channel)
-- Previous (channel)
-- Fast forward
-- Rewind
-- Volume up
-- Volume down
+- Toggle on/off
+- Next / previous chapter
+- Fast forward / rewind
 - Play/pause
-- Source select
-- Menu
+- Stop
+- Title menu, main menu, popup menu
+- Direction pad
+- Digits
+- Audio stream switching
+- ...
+- Simple commands
+
+Supported commands for remote entity :
+- Send command
+- Send command sequence
+- Predefined buttons mapping
+- Predefined UI mapping
 
 ## Prerequisites
 All players supported by the Panasonic Blu-ray Remote 2012 Android app should be supported; i.e. DMP-BDT120, DMP-BDT220, DMP-BDT221, DMP-BDT320, DMP-BDT500 and DMP-BBT01 devices.
