@@ -40,6 +40,7 @@ class SetupSteps(IntEnum):
 
 
 _setup_step = SetupSteps.INIT
+_discovered_devices: list[dict] = []
 _cfg_add_device: bool = False
 _user_input_discovery = RequestUserInput(
     {"en": "Setup mode", "de": "Setup Modus"},
@@ -242,6 +243,9 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
     :return: the setup action on how to continue
     """
     global _setup_step
+    global _discovered_devices
+
+    _discovered_devices = []
 
     config.devices.clear()  # triggers device instance removal
 
@@ -264,6 +268,7 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
     else:
         _LOG.debug("Starting auto-discovery driver setup")
         devices = await discover.async_identify_panasonic_devices()
+        _discovered_devices = devices
         for device in devices:
             avr_data = {
                 "id": device.get("host"),
@@ -303,12 +308,18 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     :param msg: response data from the requested user data
     :return: the setup action on how to continue: SetupComplete if a valid AVR device was chosen.
     """
+    global _discovered_devices
     host = msg.input_values["choice"]
-    country = msg.input_values["country"]
-    _LOG.debug("Chosen Panasonic: %s. Trying to connect and retrieve device information...", host)
+    device_name = "Panasonic"
+    if _discovered_devices:
+        for device in _discovered_devices:
+            if device.get('host') == host:
+                device_name = f"{device.get('manufacturer')} {device.get('friendlyName')}"
+
+    _LOG.debug(f"Chosen Panasonic: {device_name} {host}. Trying to connect and retrieve device information...")
     try:
         # simple connection check
-        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host, name="Panasonic"))
+        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host, name=device_name))
         await device.update()
         if device.state == States.UNKNOWN:
             _LOG.error("Cannot connect to manually entered address %s", host)

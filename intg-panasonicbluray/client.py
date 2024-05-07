@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 import asyncio
+import json
 from functools import wraps
 from typing import Callable, Concatenate, Awaitable, Any, Coroutine, TypeVar, ParamSpec
 
@@ -167,6 +168,7 @@ class PanasonicBlurayDevice(object):
             media_duration = 0
 
         if current_state != self.state:
+            self._state = current_state
             update_data[Attributes.STATE] = MEDIA_PLAYER_STATE_MAPPING.get(self.state,
                                                                            ucapi.media_player.States.UNKNOWN)
 
@@ -188,7 +190,7 @@ class PanasonicBlurayDevice(object):
 
     async def send_cmd(self, url, data):
         try:
-            response = await self._session.request(url, data)
+            response = await self._session.post(url, data=data)
         except ClientError:
             # If we can't reach the device, assume it's off
             return ['off', None]

@@ -105,13 +105,14 @@ async def async_send_ssdp_broadcast() -> Set[str]:
     Returns a set of SCPD XML resource urls for all discovered devices.
     """
     # Send up to three different broadcast messages
-    ips = get_local_ips()
+    #TODO get_local_ips raise errors on some VM
+    # ips = get_local_ips()
     # Prepare output of responding devices
     urls = set()
 
     tasks = []
-    for ip_addr in ips:
-        tasks.append(async_send_ssdp_broadcast_ip(ip_addr))
+    # for ip_addr in ips:
+    #     tasks.append(async_send_ssdp_broadcast_ip(ip_addr))
     tasks.append(async_send_ssdp_broadcast_ip(""))
     results = await asyncio.gather(*tasks)
 
@@ -172,9 +173,6 @@ def evaluate_scpd_xml(url: str, body: str) -> Optional[Dict]:
         if not device["manufacturer"] in SUPPORTED_MANUFACTURERS:
             return None
 
-        print(url)
-        print(body)
-
         if root.find(SCPD_DEVICE).find(SCPD_DEVICETYPE).text in SUPPORTED_DEVICETYPES:
             device_xml = root.find(SCPD_DEVICE)
         elif root.find(SCPD_DEVICE).find(SCPD_DEVICELIST) is not None:
@@ -200,7 +198,7 @@ def evaluate_scpd_xml(url: str, body: str) -> Optional[Dict]:
         ParseError,
         UnicodeDecodeError,
     ) as err:
-        _LOGGER.error("Error occurred during evaluation of SCPD XML from URI %s: %s", url, err)
+        # _LOGGER.error("Error occurred during evaluation of SCPD XML from URI %s: %s", url, err)
         return None
 
 
@@ -223,7 +221,7 @@ class PanasonicSSDP(asyncio.DatagramProtocol):
         """Receive responses to SSDP call."""
         # Some string operations to get the receivers URL
         # which could be found between LOCATION and end of line of the response
-        _LOGGER.debug("Response to SSDP call received: %s", data)
+        # _LOGGER.debug("Response to SSDP call received: %s", data)
         data_text = data.decode("utf-8")
         match = SSDP_LOCATION_PATTERN.search(data_text)
         if match:
