@@ -339,7 +339,7 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
         return SetupError(error_type=IntegrationSetupError.OTHER)
 
     config.devices.add(
-        DeviceInstance(id=unique_id, name="Panasonic", address=host)
+        DeviceInstance(id=unique_id, name=device_name, address=host)
     )  # triggers Panasonic BR instance creation
     config.devices.store()
 

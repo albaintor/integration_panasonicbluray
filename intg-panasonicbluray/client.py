@@ -132,7 +132,7 @@ class PanasonicBlurayDevice(object):
             return
 
         await self._update_lock.acquire()
-        _LOGGER.debug("Refresh Panasonic data")
+        # _LOGGER.debug("Refresh Panasonic data")
         if self._session is None:
             await self.connect()
         update_data = {}
