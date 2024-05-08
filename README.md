@@ -39,7 +39,9 @@ All players supported by the Panasonic Blu-ray Remote 2012 Android app should be
 Newer players with "UB" prefixes (UB-420, UB-820, and UB-9000) support a (very) limited set of functions
 To make it work with latest UHD bluray players (such as UB820), you will have to enable voice control in the network menu AND to patch the Panasonic firmware (not an easy procedure).
 More information on [AVSForum](https://www.avforums.com/threads/lets-try-again-to-put-the-free-in-regionfreedom.2441584/post-31906429)
-Tested correctly on Panasonic UB820.
+Tested correctly on my Panasonic UB820.
+
+For more information on available commands see [this page](https://next.openhab.org/addons/bindings/panasonicbdp/)
 
 ## Usage
 
