@@ -96,8 +96,7 @@ PANASONIC_REMOTE_BUTTONS_MAPPING: [DeviceButtonMapping] = [
     {"button": Buttons.PLAY, "short_press": {"cmd_id": "PAUSE"}},
     {"button": Buttons.PREV, "short_press": {"cmd_id": "REV"}},
     {"button": Buttons.NEXT, "short_press": {"cmd_id": "CUE"}},
-    {"button": Buttons.VOLUME_UP, "short_press": {"cmd_id": Commands.VOLUME_UP}},
-    {"button": Buttons.VOLUME_DOWN, "short_press": {"cmd_id": Commands.VOLUME_DOWN}}
+    {"button": Buttons.POWER, "short_press": {"cmd_id": "POWER"}},
 ]
 
 PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
@@ -109,11 +108,27 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
             {
                 "command": {
                     "cmd_id": "remote.send",
+                    "params": {"command": "POWER", "repeat": 1}
+                },
+                "icon": "uc:power-on",
+                "location": {
+                    "x": 0,
+                    "y": 0
+                },
+                "size": {
+                    "height": 1,
+                    "width": 1
+                },
+                "type": "icon"
+            },
+            {
+                "command": {
+                    "cmd_id": "remote.send",
                     "params": {"command": "PLAYBACKINFO", "repeat": 1}
                 },
                 "icon": "uc:info",
                 "location": {
-                    "x": 0,
+                    "x": 1,
                     "y": 0
                 },
                 "size": {
@@ -129,7 +144,7 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
                 },
                 "icon": "uc:language",
                 "location": {
-                    "x": 1,
+                    "x": 2,
                     "y": 0
                 },
                 "size": {
@@ -145,7 +160,7 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
                 },
                 "icon": "uc:cc",
                 "location": {
-                    "x": 2,
+                    "x": 3,
                     "y": 0
                 },
                 "size": {
@@ -161,8 +176,8 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
                 },
                 "text": "Toggle subtitles",
                 "location": {
-                    "x": 3,
-                    "y": 0
+                    "x": 0,
+                    "y": 1
                 },
                 "size": {
                     "height": 1,
@@ -177,7 +192,7 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
                 },
                 "text": "3D",
                 "location": {
-                    "x": 0,
+                    "x": 1,
                     "y": 1
                 },
                 "size": {
@@ -189,11 +204,27 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
             {
                 "command": {
                     "cmd_id": "remote.send",
+                    "params": {"command": "STOP", "repeat": 1}
+                },
+                "icon": "uc:stop",
+                "location": {
+                    "x": 2,
+                    "y": 1
+                },
+                "size": {
+                    "height": 1,
+                    "width": 1
+                },
+                "type": "icon"
+            },
+            {
+                "command": {
+                    "cmd_id": "remote.send",
                     "params": {"command": "OP_CL", "repeat": 1}
                 },
                 "text": "Eject",
                 "location": {
-                    "x": 1,
+                    "x": 2,
                     "y": 1
                 },
                 "size": {
@@ -209,8 +240,8 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
                 },
                 "text": "Title",
                 "location": {
-                    "x": 2,
-                    "y": 1
+                    "x": 0,
+                    "y": 2
                 },
                 "size": {
                     "height": 1,
