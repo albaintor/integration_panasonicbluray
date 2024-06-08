@@ -97,7 +97,7 @@ class PanasonicRemote(Remote):
         elif cmd_id == Commands.SEND_CMD:
             return await self._device.send_key(command)
         elif cmd_id == Commands.SEND_CMD_SEQUENCE:
-            commands = params.get("sequence", "").split(",")
+            commands = params.get("sequence", [])#.split(",")
             res = StatusCodes.OK
             for command in commands:
                 res = await self.handle_command(Commands.SEND_CMD, {"command": command, "params": params})
