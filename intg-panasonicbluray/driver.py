@@ -36,23 +36,6 @@ _configured_devices: dict[str, PanasonicBlurayDevice] = {}
 _R2_IN_STANDBY = False
 
 
-async def device_status_poller(interval: float = 10.0) -> None:
-    """Receiver data poller."""
-    while True:
-        await asyncio.sleep(interval)
-        if _R2_IN_STANDBY:
-            continue
-        try:
-            for device in _configured_devices.values():
-                # device.update_info()
-                # if not device.is_on:
-                #     continue
-                # TODO #20  run in parallel, join, adjust interval duration based on execution time for next update
-                await device.update()
-        except (KeyError, ValueError):
-            pass
-
-
 @api.listens_to(ucapi.Events.CONNECT)
 async def on_r2_connect_cmd() -> None:
     """Connect all configured receivers when the Remote Two sends the connect command."""
@@ -420,9 +403,7 @@ async def main():
     for device in _configured_devices.values():
         if not device.is_on:
             continue
-            _LOOP.create_task(device.update())
-
-    _LOOP.create_task(device_status_poller())
+        _LOOP.create_task(device.update())
 
     IntegrationAPI._broadcast_ws_event = patched_broadcast_ws_event
     await api.init("driver.json", setup_flow.driver_setup_handler)

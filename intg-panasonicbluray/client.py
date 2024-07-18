@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 # coding: utf-8
 import asyncio
-import json
 from functools import wraps
 from typing import Callable, Concatenate, Awaitable, Any, Coroutine, TypeVar, ParamSpec
 
 import aiohttp
-from asyncio import Lock
+from asyncio import Lock, CancelledError
 import logging
 from enum import IntEnum
 
@@ -15,7 +14,7 @@ import ucapi.media_player
 from aiohttp import ClientSession, ClientError
 from config import DeviceInstance
 from pyee import AsyncIOEventEmitter
-from ucapi.media_player import MediaType, Attributes
+from ucapi.media_player import Attributes
 
 from const import States, USER_AGENT, KEYS, PlayerVariant, MEDIA_PLAYER_STATE_MAPPING
 
@@ -35,6 +34,8 @@ class Events(IntEnum):
 _PanasonicDeviceT = TypeVar("_PanasonicDeviceT", bound="PanasonicDevice")
 _P = ParamSpec("_P")
 
+CONNECTION_RETRIES=10
+
 
 def cmd_wrapper(
         func: Callable[Concatenate[_PanasonicDeviceT, _P], Awaitable[ucapi.StatusCodes | list]],
@@ -46,6 +47,7 @@ def cmd_wrapper(
         """Wrap all command methods."""
         try:
             res = await func(obj, *args, **kwargs)
+            await obj.start_polling()
             if res[0] == 'error':
                 return ucapi.StatusCodes.BAD_REQUEST
             return ucapi.StatusCodes.OK
@@ -101,6 +103,7 @@ class PanasonicBlurayDevice(object):
         self._id = device_config.id
         self._name = device_config.name
         self._hostname = device_config.address
+        self._device_config = device_config
         self._timeout = timeout
         self.refresh_frequency = timedelta(seconds=refresh_frequency)
         self._state = States.UNKNOWN
@@ -111,6 +114,8 @@ class PanasonicBlurayDevice(object):
         self._variant = PlayerVariant.AUTO
         self._media_position = 0
         self._media_duration = 0
+        self._update_task = None
+        self._update_lock = Lock()
 
     async def connect(self):
         if self._session:
@@ -121,11 +126,50 @@ class PanasonicBlurayDevice(object):
                                               timeout=session_timeout,
                                               raise_for_status=True)
         self.events.emit(Events.CONNECTED, self.id)
+        await self.start_polling()
 
     async def disconnect(self):
         if self._session:
             await self._session.close()
             self._session = None
+
+    async def start_polling(self):
+        """Start polling task."""
+        if self._update_task is not None:
+            return
+        await self._update_lock.acquire()
+        if self._update_task is not None:
+            return
+        _LOGGER.debug("Start polling task for device %s", self.id)
+        self._update_task = self._event_loop.create_task(self._background_update_task())
+        self._update_lock.release()
+
+    async def stop_polling(self):
+        """Stop polling task."""
+        if self._update_task:
+            try:
+                self._update_task.cancel()
+            except CancelledError:
+                pass
+            self._update_task = None
+
+    async def _background_update_task(self):
+        self._reconnect_retry = 0
+        while True:
+            if not self._device_config.always_on:
+                if self.state == States.OFF:
+                    self._reconnect_retry += 1
+                    if self._reconnect_retry > CONNECTION_RETRIES:
+                        _LOGGER.debug("Stopping update task as the device %s is off", self.id)
+                        break
+                    _LOGGER.debug("Device %s is off, retry %s", self.id, self._reconnect_retry)
+                elif self._reconnect_retry > 0:
+                    self._reconnect_retry = 0
+                    _LOGGER.debug("Device %s is on again", self.id)
+            await self.update()
+            await asyncio.sleep(10)
+
+        self._update_task = None
 
     async def update(self):
         if self._update_lock.locked():

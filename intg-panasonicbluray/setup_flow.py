@@ -256,7 +256,8 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
         _LOG.debug("Starting manual driver setup for %s", address)
         try:
             # simple connection check
-            device = PanasonicBlurayDevice(device_config=DeviceInstance(id=address,address=address, name="Panasonic"))
+            device = PanasonicBlurayDevice(device_config=DeviceInstance(id=address,address=address,
+                                                                        name="Panasonic",always_on=False))
             await device.update()
             if device.state == States.UNKNOWN:
                 _LOG.error("Cannot connect to manually entered address %s", address)
@@ -295,6 +296,14 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
                     "fr": "Sélectionnez votre lecteur Panasonic",
                 },
             },
+            {
+                "id": "always_on",
+                "label": {
+                    "en": "Keep connection alive (faster initialization, but consumes more battery)",
+                    "fr": "Conserver la connexion active (lancement plus rapide, mais consomme plus de batterie)",
+                },
+                "field": {"checkbox": {"value": False}},
+            },
         ],
     )
 
@@ -310,6 +319,7 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     """
     global _discovered_devices
     host = msg.input_values["choice"]
+    always_on = msg.input_values.get("always_on") == "true"
     device_name = "Panasonic"
     if _discovered_devices:
         for device in _discovered_devices:
@@ -319,7 +329,8 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     _LOG.debug(f"Chosen Panasonic: {device_name} {host}. Trying to connect and retrieve device information...")
     try:
         # simple connection check
-        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host, name=device_name))
+        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host,
+                                                                    name=device_name,always_on=always_on))
         await device.update()
         if device.state == States.UNKNOWN:
             _LOG.error("Cannot connect to manually entered address %s", host)
@@ -339,7 +350,7 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
         return SetupError(error_type=IntegrationSetupError.OTHER)
 
     config.devices.add(
-        DeviceInstance(id=unique_id, name=device_name, address=host)
+        DeviceInstance(id=unique_id, name=device_name, address=host,always_on=always_on)
     )  # triggers Panasonic BR instance creation
     config.devices.store()
 
