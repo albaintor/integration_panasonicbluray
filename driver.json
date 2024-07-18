@@ -4,7 +4,7 @@
 	"min_core_api": "0.20.0",
 	"name": { "en": "Panasonic Bluray" },
 	"icon": "custom:panasonic.png",
-    "port": 9091,
+    "port": 9094,
 	"description": {
 		"en": "Control your Panasonic Bluray with Remote Two.",
 		"de": "Steuere Panasonic Bluray mit Remote Two.",
