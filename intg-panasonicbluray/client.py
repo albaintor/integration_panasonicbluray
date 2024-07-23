@@ -109,7 +109,6 @@ class PanasonicBlurayDevice(object):
         self._state = States.UNKNOWN
         self._event_loop = asyncio.get_event_loop() or asyncio.get_running_loop()
         self.events = AsyncIOEventEmitter(self._event_loop)
-        self._update_lock = Lock()
         self._session: ClientSession | None = None
         self._variant = PlayerVariant.AUTO
         self._media_position = 0
@@ -137,12 +136,8 @@ class PanasonicBlurayDevice(object):
         """Start polling task."""
         if self._update_task is not None:
             return
-        await self._update_lock.acquire()
-        if self._update_task is not None:
-            return
         _LOGGER.debug("Start polling task for device %s", self.id)
         self._update_task = self._event_loop.create_task(self._background_update_task())
-        self._update_lock.release()
 
     async def stop_polling(self):
         """Stop polling task."""
