@@ -13,7 +13,7 @@ from enum import IntEnum
 import ucapi.media_player
 from aiohttp import ClientSession, ClientError
 from config import DeviceInstance
-from pyee import AsyncIOEventEmitter
+from pyee.asyncio import AsyncIOEventEmitter
 from ucapi.media_player import Attributes
 
 from const import States, USER_AGENT, KEYS, PlayerVariant, MEDIA_PLAYER_STATE_MAPPING
