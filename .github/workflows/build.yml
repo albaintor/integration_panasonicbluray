@@ -13,13 +13,14 @@ on:
 
 env:
   INTG_NAME: panasonicbluray
-  HASH_FILENAME: uc-intg-panasonicbluray.hash
+  HASH_FILENAME: uc-src.hash
   # Python version to use in the builder image. See https://hub.docker.com/r/unfoldedcircle/r2-pyinstaller for possible versions.
   PYTHON_VER: 3.11.6-0.2.0
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # using ubuntu-24.04: Package 'qemu' has no installation candidate
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,7 +56,7 @@ jobs:
             bash -c \
             "cd /workspace && \
               python -m pip install -r requirements.txt && \
-              pyinstaller --clean --onedir --name driver intg-panasonicbluray/driver.py"
+              pyinstaller --clean --onedir --name driver src/driver.py"
 
       - name: Add version
         run: |
@@ -88,7 +89,8 @@ jobs:
   release:
     name: Create Release
     if: github.ref == 'refs/heads/main' || contains(github.ref, 'tags/v')
-    runs-on: ubuntu-latest
+    # using ubuntu-24.04: Package 'qemu' has no installation candidate
+    runs-on: ubuntu-22.04
     needs: [build]
 
     steps:

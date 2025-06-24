@@ -91,8 +91,9 @@ def cmd_wrapper(
             return ucapi.StatusCodes.BAD_REQUEST
         except Exception as ex:
             _LOGGER.error(
-                "Unknown error %s",
-                func.__name__)
+                "Unknown error %s : %s",
+                func.__name__, ex)
+            return ucapi.StatusCodes.BAD_REQUEST
 
     return wrapper
 

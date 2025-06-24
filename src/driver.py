@@ -132,7 +132,7 @@ async def on_unsubscribe_entities(entity_ids: list[str]) -> None:
 
     # Keep devices that are used by other configured entities not in this list
     for entity in api.configured_entities.get_all():
-        entity_id = entity.get('entity_id')
+        entity_id = entity.get("entity_id")
         if entity_id in entity_ids:
             continue
         device_id = device_from_entity_id(entity_id)
@@ -329,6 +329,12 @@ def on_device_added(device: config.DeviceInstance) -> None:
     _configure_new_device(device, connect=False)
 
 
+def on_device_updated(device: config.DeviceInstance) -> None:
+    """Handle an updated device in the configuration."""
+    _LOG.debug("Device config updated: %s, reconnect with new configuration", device)
+    _configure_new_device(device, connect=True)
+
+
 def on_device_removed(device: config.DeviceInstance | None) -> None:
     """Handle a removed device in the configuration."""
     if device is None:
@@ -354,34 +360,6 @@ async def _async_remove(device: PanasonicBlurayDevice) -> None:
     device.events.remove_all_listeners()
 
 
-async def patched_broadcast_ws_event(
-        self, msg: str, msg_data: dict[str, Any], category: uc.EventCategory
-) -> None:
-    """
-    Send the given event-message to all connected WebSocket clients.
-
-    If a client is no longer connected, a log message is printed and the remaining
-    clients are notified.
-
-    :param msg: event message name
-    :param msg_data: message data payload
-    :param category: event category
-    """
-    data = {"kind": "event", "msg": msg, "msg_data": msg_data, "cat": category}
-    data_dump = json.dumps(data)
-    data_log = None
-    # filter fields
-    if _LOG.isEnabledFor(logging.DEBUG):
-        data_log = json.dumps(data) if filter_log_msg_data(data) else data_dump
-
-    for websocket in self._clients.copy():
-        if _LOG.isEnabledFor(logging.DEBUG):
-            _LOG.debug("[%s] ->: %s", websocket.remote_address, data_log)
-        try:
-            await websocket.send(data_dump)
-        except websockets.exceptions.WebSocketException:
-            pass
-
 async def main():
     """Start the Remote Two integration driver."""
     logging.basicConfig()
@@ -393,8 +371,9 @@ async def main():
     logging.getLogger("media_player").setLevel(level)
     logging.getLogger("receiver").setLevel(level)
     logging.getLogger("setup_flow").setLevel(level)
+    logging.getLogger("remote").setLevel(level)
 
-    config.devices = config.Devices(api.config_dir_path, on_device_added, on_device_removed)
+    config.devices = config.Devices(api.config_dir_path, on_device_added, on_device_removed, on_device_updated)
     for device in config.devices.all():
         _LOG.debug("UC Orange device %s %s", device.id, device.address)
         _configure_new_device(device, connect=False)
@@ -405,7 +384,6 @@ async def main():
             continue
         _LOOP.create_task(device.update())
 
-    IntegrationAPI._broadcast_ws_event = patched_broadcast_ws_event
     await api.init("driver.json", setup_flow.driver_setup_handler)
 
 
