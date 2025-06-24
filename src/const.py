@@ -40,7 +40,7 @@ DEFAULT_NAME = "panasonicbluray"
 
 # Known key commands
 KEYS = ['POWER', 'OP_CL', 'POWERON', 'POWEROFF'
-        'PLAYBACK', 'PAUSE', 'STOP', 'SKIPFWD', 'SKIPREV', 'REV',
+                                     'PLAYBACK', 'PAUSE', 'STOP', 'SKIPFWD', 'SKIPREV', 'REV',
         'D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7', 'D8', 'D9', 'D12',
         'SHARP',  # '#'
         'CLEAR',  # '*' /  CANCEL
@@ -76,6 +76,7 @@ PANASONIC_SIMPLE_COMMANDS = {
     "MODE_SKIP_TRAILER": "SKIP_THE_TRAILER",
     "MODE_SOUNDEFFECT": "SOUNDEFFECT"
 }
+
 
 class PlayerVariant(Enum):
     AUTO = 1
@@ -270,7 +271,7 @@ PANASONIC_REMOTE_UI_PAGES: [UiPage] = [
     {
         "page_id": "Panasonic numbers",
         "name": "Panasonic numbers",
-        "grid": { "height": 4, "width": 3 },
+        "grid": {"height": 4, "width": 3},
         "items": [{
             "command": {
                 "cmd_id": "remote.send",

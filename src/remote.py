@@ -40,10 +40,11 @@ class PanasonicRemote(Remote):
             Attributes.STATE: PANASONIC_REMOTE_STATE_MAPPING.get(device.state),
         }
         super().__init__(
-            entity_id,
-            config_device.name,
-            features,
-            attributes,
+            identifier=entity_id,
+            name=config_device.name,
+            features=features,
+            attributes=attributes,
+            simple_commands=list(PANASONIC_SIMPLE_COMMANDS.keys()),
             button_mapping=PANASONIC_REMOTE_BUTTONS_MAPPING,
             ui_pages=PANASONIC_REMOTE_UI_PAGES
         )
@@ -55,7 +56,6 @@ class PanasonicRemote(Remote):
             return int(float(value))
         else:
             return default
-
 
     async def command(self, cmd_id: str, params: dict[str, Any] | None = None) -> StatusCodes:
         """
