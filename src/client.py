@@ -48,7 +48,7 @@ def cmd_wrapper(
         try:
             res = await func(obj, *args, **kwargs)
             await obj.start_polling()
-            if res[0] == 'error':
+            if res and type(res) == list and  res[0] == 'error':
                 return ucapi.StatusCodes.BAD_REQUEST
             return ucapi.StatusCodes.OK
         except ClientError as exc:
