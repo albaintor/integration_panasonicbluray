@@ -1,20 +1,20 @@
 {
 	"driver_id": "panasonicbluray_driver",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"min_core_api": "0.20.0",
 	"name": { "en": "Panasonic Bluray" },
 	"icon": "custom:panasonic.png",
 	"description": {
-		"en": "Control your Panasonic Bluray with Remote Two.",
-		"de": "Steuere Panasonic Bluray mit Remote Two.",
-		"fr": "Contrôler votre Panasonic Bluray avec Remote Two."
+		"en": "Control your Panasonic Bluray with Remote Two/3.",
+		"de": "Steuere Panasonic Bluray mit Remote Two/3.",
+		"fr": "Contrôler votre Panasonic Bluray avec Remote Two/3."
 	},
 	"developer": {
 		"name": "Albaintor",
 		"email": "albaintor@github.com",
 		"url": "https://github.com/albaintor"
   	},
-  	"home_page": "https://github.com/albaintor/integration-panasonicbluray",
+  	"home_page": "https://github.com/albaintor/integration_panasonicbluray",
 	"setup_data_schema": {
 		"title": {
 			"en": "Integration setup",
@@ -33,12 +33,12 @@
 					"label": {
 						"value": {
 							"en": "The integration will discover your Panasonic Bluray on your network. Please make sure that your Panasonic Bluray is powered on and that no old pairing request is shown.\nIf pairing continuously fails, restart your Panasonic Bluray and try again.",
-                            "fr": "L'intégration découvrira votre lecteur Bluray Panasonic sur votre réseau.\nSi l'appairage échoue systématiquement, redémarrez votre lecteur Panasonic Bluray et réessayez"
+                            "fr": "L'intégration détectera votre lecteur Bluray Panasonic sur votre réseau.\nSi l'appairage échoue systématiquement, redémarrez votre lecteur Panasonic Bluray et réessayez"
 						}
 					}
 				}
 			}
 		]
 	},
-	"release_date": "2025-06-24"
+	"release_date": "2025-08-25"
 }
