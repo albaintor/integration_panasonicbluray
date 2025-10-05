@@ -41,8 +41,9 @@ Here are the step by steps patch the firmware
 The next steps will occur between your machine and the player :
 1. Insert the USB key in the Panasonic player
 2. Turn the Panasonic player on : the next step will make a backup of the firmware on the USB key
-3. Then run the `Patcher` script again from your machine and this time click on `Connect` then on `Exec script`
-4. Once finished (this will generate dump fma files 1 to 7 and write them into the flashdrive, it will take some time), turn off the player
+3. Grab the IP address of your Panasonic Player
+4. Then run the `Patcher` script again from your machine, fill in the IP address field with the IP of the Panasonic Player, and this time click on `Connect` then on `Exec script`
+5. Once finished (this will generate dump fma files 1 to 7 and write them into the flashdrive, it will take some time), turn off the player
 
 ## Patch the firmware
 
