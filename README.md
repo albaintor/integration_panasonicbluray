@@ -73,7 +73,12 @@ Here are the step by steps patch the firmware :
  - Additional (optional) patch file(s) : for ex `patcher_overlay_V1.35.zip` to improve overlay menus (link at the end of the post)
 4. Open VirtualBox and open the downloaded and unzipped VM `lubuntu.vbox` from step 1 
 5. Modify the VM configuration to add a shared folder between your disk and the VM : in this shared folder you will copy the patcher files
-6. Unzip the patcher file `Patch-Program...7z` (with the file browser or from terminal `7z x <file.7z>`) : unzip to another folder than the shared folder otherwise it won't work
+ - Add a shared folder : first field is the folder where your patch files are located on your PC/Mac, second field type in `panasonic` and mounting point field `/panasonic`
+ - Open the terminal and run this command : `sudo adduser $USER vboxsf` (password : lulu)
+ - Reboot the VM
+6. Open the file browser on the VM and go to the folder `/panasonic`. Copy the patch files to a folder in your VM like here `/home/lu/Downloads` (otherwise it won't work if you patch from the shared folder):
+   <img width="450" height="400" alt="image" src="https://github.com/user-attachments/assets/2170160a-a83f-466a-a2d2-4b1620c17e7d" />
+   <br>Unzip the patcher file `Patch-Program...7z` with the file browser or from terminal `7z x <file.7z>`
 7. Where you extracted the patcher, replace the `res/drive.img.gz` file by the one you downloaded in step 3
 8. Insert a USB key and launch `./Patcher` script from the patcher directory
 9. A popup will show up, then select your USB device in the upper right dropdown and click on `Create USB`
