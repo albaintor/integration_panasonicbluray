@@ -26,8 +26,15 @@ Here are the step by steps patch the firmware :
    <br>Unzip the patcher file `Patch-Program...7z` with the file browser or from terminal `7z x <file.7z>`
 7. Where you extracted the patcher, replace the `res/drive.img.gz` file by the one you downloaded in step 3
 8. Insert a USB key and launch `./Patcher` script from the patcher directory
+<br>Note : if your USB flashdrive is not visible, go to the VM settings and try #1 add it manually in the list from the USB section (green plus button) and #2 Try USB2 or USB3 controllers (the VM needs to be shutdown)
+<img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/5bbbb090-4578-46e1-98df-65b5dc38a85c" />
+
+
 9. A popup will show up, then select your USB device in the upper right dropdown and click on `Create USB`
-9. (this step caused corrupted backups after, you can skip it) Once the USB is flashed, go into the USB drive from the file browser and overwrite in it the files from the patcher overlay (unzip from the UI not command line because unzip don't support protected password archives) : `patcher_overlay_...zip`
+   
+<img width="649" height="514" alt="image" src="https://github.com/user-attachments/assets/1ff32caf-3dfe-4c6b-83a2-3017ee6399f0" />
+
+~~10. This step caused corrupted backups after, you can skip it) Once the USB is flashed, go into the USB drive from the file browser and overwrite in it the files from the patcher overlay (unzip from the UI not command line because unzip don't support protected password archives : `patcher_overlay_...zip`~~
 
 The next steps will occur between your machine and the player :
 1. Insert the USB key in the Panasonic player
@@ -44,3 +51,36 @@ cp -f 3_write.sh script.sh
 8. If a `Checksum error` appears, don't go further : restart from the previous step 8
 9. Remove the USB key and put it back in the Panasonic player and turn it on : sometimes you have to remove electric cord if the connection with the patcher fails.
 10. Launch `Patcher` from your computer, connect to the player and click on `Exec script` : beware, this step takes more than 20 minutes. Try to move arrow keys in the meantime to prevent sleep.
+
+
+
+## Create own Ubuntu VM to patch the Player
+
+An Ubuntu linux x86-64 system is necessary to patch the player : either use the VM from the supplied link or build your own one like here. The Linux system needs to be updated with additional libraries to make the patcher program work.
+
+Download Ubuntu VDI image for VirtualBox such as https://www.osboxes.org/ubuntu/
+
+Install the following packages :
+```
+sudo apt-get install 7-zip
+sudo apt-get install libboost-program-options-dev
+```
+
+Edit $HOME/.basrhc profile file and add :
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu`
+
+Switch to root user `su - root` and copy the following files from the lib subfolder of the patch program folder into the `/usr/lib/x86_64-linux-gnu` folder : 
+<img width="972" height="26" alt="image" src="https://github.com/user-attachments/assets/3ebad0ca-9916-4fd6-a279-d9229c01b580" />
+These shared libraries are no longer available on the repository and are necessary to make the `Patcher` create the disk image
+
+The `Patcher` program should work correctly
+
+
+### Optional : install VirtualBox addon package
+
+This package lets copy/paste and improve integration between host and VM
+```
+sudo apt-get install virtualbox-guest-additions-iso
+cd /media/osboxes/VBox*
+sudo ./VBoxLinuxAdditions.run
+```
