@@ -65,7 +65,7 @@ You will need a PC or a Mac with an intel based CPU (the supplied VM is a x86 Li
 The password is the same for unzipping, or root password of the vm : `lulu`
 
 Here are the step by steps patch the firmware :
-1. Download the Ubuntu modified virtual machine from the link inside the post : you can also build your own one as described at the end of this page
+1. Download the Ubuntu modified virtual machine from the link inside the post : you can also build your own one as described at the [end of this page](#create-own-ubuntu-vm-to-patch-the-player)
 2. Download and install Oracle VirtualBox on your machine
 3. Download the patch files from the post : these files should be unzipped from the VM, not from your PC/Mac
  - Patcher file (ex : Patch-Program169-182.7z) : main patch program
@@ -276,9 +276,9 @@ Please read our [contribution guidelines](CONTRIBUTING.md) before opening a pull
 An Ubuntu linux x86-64 system is necessary to patch the player : either use the VM from the supplied link or build your own one like here. The Linux system needs to be updated with additional libraries to make the patcher program work.
 
 Download Ubuntu VDI image for VirtualBox such as https://www.osboxes.org/ubuntu/
-Install the following packages (first one to get easier clipboard copy/paste...) :
+
+Install the following packages :
 ```
-sudo apt-get install virtualbox-ext-pack
 sudo apt-get install 7-zip
 sudo apt-get install libboost-program-options-dev
 ```
@@ -291,6 +291,16 @@ Switch to root user `su - root` and copy the following files from the lib subfol
 These shared libraries are no longer available on the repository and are necessary to make the `Patcher` create the disk image
 
 The `Patcher` program should work correctly
+
+
+### Optional : install VirtualBox addon package
+
+This package lets copy/paste and improve integration between host and VM
+```
+sudo apt-get install virtualbox-guest-additions-iso
+cd /media/osboxes/VBox*
+sudo ./VBoxLinuxAdditions.run
+```
 
 ## License
 
