@@ -47,10 +47,10 @@ The next steps will occur between your machine and the player :
 ## Patch the firmware
 
 1. Put the USB back in your computer
-2. Optional : you change change the srt (subtitle files) font, browse in the USB key and edit the `0_setup.ini` file
+2. Optional : if you want to change the srt (subtitle files) font, browse in the USB key and edit the `0_setup.ini` file
 3. In the terminal, go into the USB drive - normally a path like `/media/lu/XXX` - and launch (still `lulu` password for root when requested) :
 
-If a `Checksum error` appears, don't go further : restart the backup step earlier
+If a `Checksum error` appears, don't go further : restart the backup steps earlier
 ```bash
 cd /media/lu/XXX
 sudo bash 2_patch.sh
@@ -65,9 +65,9 @@ cp -f 3_write.sh script.sh
 **Beware, this step takes more than 20 minutes. Try to move arrow keys with your Panasonic remote in the meantime to prevent sleep.**
 
 
+# Create your own Ubuntu VM to patch the Player
 
-## Create own Ubuntu VM to patch the Player
-
+If you prefer to build your own VM instead of using the one from the link, this is possible :
 An Ubuntu linux x86-64 system is necessary to patch the player : either use the VM from the supplied link or build your own one like here. The Linux system needs to be updated with additional libraries to make the patcher program work.
 
 Download Ubuntu VDI image for VirtualBox such as https://www.osboxes.org/ubuntu/
