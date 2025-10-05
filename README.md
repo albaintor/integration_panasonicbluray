@@ -271,6 +271,23 @@ and under the GitHub [releases](https://github.com/albaintor/integration-panason
 
 Please read our [contribution guidelines](CONTRIBUTING.md) before opening a pull request.
 
+## Create own Ubuntu VM
+
+Download Ubuntu VDI image for VirtualBox such as https://www.osboxes.org/ubuntu/
+Install the following packages :
+```
+sudo apt-get install virtualbox-ext-pack
+sudo apt-get install libboost-program-options-dev
+```
+
+Edit $HOME/.basrhc profile file and add :
+`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu`
+
+Switch to root user and copy the following files from the lib subfolder into the /usr/lib/x86_64-linux-gnu folder : 
+<img width="972" height="26" alt="image" src="https://github.com/user-attachments/assets/3ebad0ca-9916-4fd6-a279-d9229c01b580" />
+
+The `Patcher` program should work correctly
+
 ## License
 
 This project is licensed under the [**Mozilla Public License 2.0**](https://choosealicense.com/licenses/mpl-2.0/).
