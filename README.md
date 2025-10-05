@@ -233,36 +233,6 @@ and under the GitHub [releases](https://github.com/albaintor/integration-panason
 
 Please read our [contribution guidelines](CONTRIBUTING.md) before opening a pull request.
 
-## Create own Ubuntu VM to patch the Player
-
-An Ubuntu linux x86-64 system is necessary to patch the player : either use the VM from the supplied link or build your own one like here. The Linux system needs to be updated with additional libraries to make the patcher program work.
-
-Download Ubuntu VDI image for VirtualBox such as https://www.osboxes.org/ubuntu/
-
-Install the following packages :
-```
-sudo apt-get install 7-zip
-sudo apt-get install libboost-program-options-dev
-```
-
-Edit $HOME/.basrhc profile file and add :
-`export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu`
-
-Switch to root user `su - root` and copy the following files from the lib subfolder of the patch program folder into the `/usr/lib/x86_64-linux-gnu` folder : 
-<img width="972" height="26" alt="image" src="https://github.com/user-attachments/assets/3ebad0ca-9916-4fd6-a279-d9229c01b580" />
-These shared libraries are no longer available on the repository and are necessary to make the `Patcher` create the disk image
-
-The `Patcher` program should work correctly
-
-
-### Optional : install VirtualBox addon package
-
-This package lets copy/paste and improve integration between host and VM
-```
-sudo apt-get install virtualbox-guest-additions-iso
-cd /media/osboxes/VBox*
-sudo ./VBoxLinuxAdditions.run
-```
 
 ## License
 
