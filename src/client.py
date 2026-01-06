@@ -36,6 +36,8 @@ _P = ParamSpec("_P")
 
 CONNECTION_RETRIES=10
 
+DEFAULT_MEDIA_DURATION=18000
+
 
 def cmd_wrapper(
         func: Callable[Concatenate[_PanasonicDeviceT, _P], Awaitable[ucapi.StatusCodes | list]],
@@ -206,6 +208,8 @@ class PanasonicBlurayDevice(object):
             media_duration = status[2]
         else:
             media_duration = 0
+        if media_duration == 0:
+            media_duration = DEFAULT_MEDIA_DURATION
 
         if current_state != self.state:
             self._state = current_state
@@ -215,6 +219,7 @@ class PanasonicBlurayDevice(object):
         if media_position != self.media_position:
             self._media_position = media_position
             update_data[Attributes.MEDIA_POSITION] = self.media_position
+
         if media_duration != self.media_duration:
             self._media_duration = media_duration
             update_data[Attributes.MEDIA_DURATION] = self.media_duration
