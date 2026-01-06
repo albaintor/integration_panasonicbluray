@@ -7,15 +7,12 @@ This module implements a Remote Two integration driver for Orange STB.
 """
 
 import asyncio
-import json
 import logging
 import os
+import sys
 from typing import Any
 
 import ucapi
-import ucapi.api_definitions as uc
-import websockets
-from ucapi.api import filter_log_msg_data, IntegrationAPI
 from ucapi.media_player import Attributes as MediaAttr, MediaType
 
 import client
@@ -27,13 +24,17 @@ from client import PanasonicBlurayDevice
 from config import device_from_entity_id
 
 _LOG = logging.getLogger("driver")  # avoid having __main__ in log messages
-_LOOP = asyncio.get_event_loop()
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+_LOOP = asyncio.new_event_loop()
+asyncio.set_event_loop(_LOOP)
 
+# pylint: disable=C0103
 # Global variables
 api = ucapi.IntegrationAPI(_LOOP)
-# Map of device_id -> Orange instance
+# Map of device_id -> device instance
 _configured_devices: dict[str, PanasonicBlurayDevice] = {}
-_R2_IN_STANDBY = False
+_REMOTE_IN_STANDBY = False
 
 
 @api.listens_to(ucapi.Events.CONNECT)
@@ -60,10 +61,10 @@ async def on_r2_disconnect_cmd():
 async def on_r2_enter_standby() -> None:
     """
     Enter standby notification from Remote Two.
-    Disconnect every OrangeTV instances.
+    Disconnect every devices instances.
     """
-    global _R2_IN_STANDBY
-    _R2_IN_STANDBY = True
+    global _REMOTE_IN_STANDBY
+    _REMOTE_IN_STANDBY = True
     _LOG.debug("Enter standby event: disconnecting device(s)")
     for device in _configured_devices.values():
         # start background task
@@ -75,11 +76,11 @@ async def on_r2_exit_standby() -> None:
     """
     Exit standby notification from Remote Two.
 
-    Connect all OrangeTV instances.
+    Connect all devices instances.
     """
-    global _R2_IN_STANDBY
+    global _REMOTE_IN_STANDBY
 
-    _R2_IN_STANDBY = False
+    _REMOTE_IN_STANDBY = False
     _LOG.debug("Exit standby event: connecting device(s)")
 
     for device in _configured_devices.values():
@@ -95,9 +96,9 @@ async def on_subscribe_entities(entity_ids: list[str]) -> None:
 
     :param entity_ids: entity identifiers.
     """
-    global _R2_IN_STANDBY
+    global _REMOTE_IN_STANDBY
 
-    _R2_IN_STANDBY = False
+    _REMOTE_IN_STANDBY = False
     _LOG.debug("Subscribe entities event: %s", entity_ids)
     for entity_id in entity_ids:
         entity = api.configured_entities.get(entity_id)
@@ -369,13 +370,12 @@ async def main():
     logging.getLogger("discover").setLevel(level)
     logging.getLogger("driver").setLevel(level)
     logging.getLogger("media_player").setLevel(level)
-    logging.getLogger("receiver").setLevel(level)
     logging.getLogger("setup_flow").setLevel(level)
     logging.getLogger("remote").setLevel(level)
 
     config.devices = config.Devices(api.config_dir_path, on_device_added, on_device_removed, on_device_updated)
     for device in config.devices.all():
-        _LOG.debug("UC Orange device %s %s", device.id, device.address)
+        _LOG.debug("Panasonic device %s %s", device.id, device.address)
         _configure_new_device(device, connect=False)
 
     # _LOOP.create_task(receiver_status_poller())

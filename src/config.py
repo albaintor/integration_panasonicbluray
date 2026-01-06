@@ -9,8 +9,9 @@ import dataclasses
 import json
 import logging
 import os
-from dataclasses import dataclass
-from typing import Iterator, Callable
+from asyncio import Lock
+from dataclasses import dataclass, field, fields
+from typing import Callable, Iterator
 
 from ucapi import EntityTypes
 
@@ -38,18 +39,23 @@ def device_from_entity_id(entity_id: str) -> str | None:
 
 @dataclass
 class DeviceInstance:
-    """Orange TV device configuration."""
+    """Device configuration."""
 
     id: str
     name: str
     address: str
-    always_on: bool
+    always_on: bool | None = field(default=False)
+    refresh_interval: int | None = field(default=10)
 
-    def __init__(self, id, name, address, always_on):
-        self.id = id
-        self.name = name
-        self.address = address
-        self.always_on = always_on
+    def __post_init__(self):
+        """Apply default values on missing fields."""
+        for attribute in fields(self):
+            # If there is a default and the value of the field is none we can assign a value
+            if (
+                not isinstance(attribute.default, dataclasses.MISSING.__class__)
+                and getattr(self, attribute.name) is None
+            ):
+                setattr(self, attribute.name, attribute.default)
 
 
 class _EnhancedJSONEncoder(json.JSONEncoder):
@@ -64,10 +70,13 @@ class _EnhancedJSONEncoder(json.JSONEncoder):
 class Devices:
     """Integration driver configuration class. Manages all configured Sony devices."""
 
-    def __init__(self, data_path: str,
-                 add_handler: Callable[[DeviceInstance], None],
-                 remove_handler: Callable[[DeviceInstance|None], None],
-                 update_handler: Callable[[DeviceInstance], None]):
+    def __init__(
+        self,
+        data_path: str,
+        add_handler: Callable[[DeviceInstance], None],
+        remove_handler: Callable[[DeviceInstance | None], None],
+        update_handler: Callable[[DeviceInstance], None],
+    ):
         """
         Create a configuration instance for the given configuration path.
 
@@ -80,6 +89,7 @@ class Devices:
         self._remove_handler = remove_handler
         self._update_handler = update_handler
         self.load()
+        self._config_lock = Lock()
 
     @property
     def data_path(self) -> str:
@@ -97,26 +107,17 @@ class Devices:
                 return True
         return False
 
-    def get_by_id_or_address(self, unique_id: str, address: str) -> DeviceInstance | None:
-        """
-        Get device configuration for a matching id or address.
-
-        :return: A copy of the device configuration or None if not found.
-        """
-        for item in self._config:
-            if item.id == unique_id or item.address == address:
-                # return a copy
-                return dataclasses.replace(item)
-        return None
-
-    def add(self, atv: DeviceInstance) -> None:
-        """Add a new configured Sony device."""
-        existing = self.get_by_id_or_address(atv.id, atv.address)
-        if existing:
-            _LOG.debug("Replacing existing device %s => %s", existing, atv)
-            self._config.remove(existing)
-
-        self._config.append(atv)
+    def add_or_update(self, atv: DeviceInstance) -> None:
+        """Add a new configured device."""
+        if self.contains(atv.id):
+            _LOG.debug("Existing config %s, updating it %s", atv.id, atv)
+            self.update(atv)
+            if self._update_handler is not None:
+                self._update_handler(atv)
+        else:
+            _LOG.debug("Adding new config %s", atv)
+            self._config.append(atv)
+            self.store()
         if self._add_handler is not None:
             self._add_handler(atv)
 
@@ -137,20 +138,6 @@ class Devices:
                 item.always_on = device_instance.always_on
                 return self.store()
         return False
-
-    def add_or_update(self, atv: DeviceInstance) -> None:
-        """Add a new configured device."""
-        if self.contains(atv.id):
-            _LOG.debug("Existing config %s, updating it %s", atv.id, atv)
-            self.update(atv)
-            if self._update_handler is not None:
-                self._update_handler(atv)
-        else:
-            _LOG.debug("Adding new config %s", atv)
-            self._config.append(atv)
-            self.store()
-        if self._add_handler is not None:
-            self._add_handler(atv)
 
     def remove(self, device_id: str) -> bool:
         """Remove the given device configuration."""
@@ -191,6 +178,69 @@ class Devices:
 
         return False
 
+    def export(self) -> str:
+        """
+        Export the configuration file to a string.
+
+        :return: JSON formatted string of the current configuration
+        """
+        return json.dumps(self._config, ensure_ascii=False, cls=_EnhancedJSONEncoder)
+
+    def import_config(self, updated_config: str) -> bool:
+        """
+        Import the updated configuration.
+
+        :return: True if the import was successful
+        """
+        config_backup = self._config.copy()
+        try:
+            data = json.loads(updated_config)
+            self._config.clear()
+            for item in data:
+                try:
+                    self._config.append(DeviceInstance(**item))
+                except TypeError as ex:
+                    _LOG.warning("Invalid configuration entry will be ignored: %s", ex)
+
+            _LOG.debug("Configuration to import : %s", self._config)
+
+            # Now trigger events add/update/removal of devices based on old / updated list
+            for device in self._config:
+                found = False
+                for old_device in config_backup:
+                    if old_device.id == device.id:
+                        if self._update_handler is not None:
+                            self._update_handler(device)
+                        found = True
+                        break
+                if not found and self._add_handler is not None:
+                    self._add_handler(device)
+            for old_device in config_backup:
+                found = False
+                for device in self._config:
+                    if old_device.id == device.id:
+                        found = True
+                        break
+                if not found and self._remove_handler is not None:
+                    self._remove_handler(old_device)
+
+            with open(self._cfg_file_path, "w+", encoding="utf-8") as f:
+                json.dump(self._config, f, ensure_ascii=False, cls=_EnhancedJSONEncoder)
+            return True
+        # pylint: disable=W0718
+        except Exception as ex:
+            _LOG.error(
+                "Cannot import the updated configuration %s, keeping existing configuration : %s", updated_config, ex
+            )
+            try:
+                # Restore current configuration
+                self._config = config_backup
+                self.store()
+            # pylint: disable=W0718
+            except Exception:
+                pass
+        return False
+
     def load(self) -> bool:
         """
         Load the config into the config global variable.
@@ -214,4 +264,5 @@ class Devices:
         return False
 
 
+# pylint: disable=C0103
 devices: Devices | None = None

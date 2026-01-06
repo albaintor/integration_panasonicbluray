@@ -31,7 +31,7 @@ class Events(IntEnum):
     DISCONNECTED = 4
 
 
-_PanasonicDeviceT = TypeVar("_PanasonicDeviceT", bound="PanasonicDevice")
+_PanasonicDeviceT = TypeVar("_PanasonicDeviceT", bound="PanasonicBlurayDevice")
 _P = ParamSpec("_P")
 
 CONNECTION_RETRIES=10
@@ -68,7 +68,7 @@ def cmd_wrapper(
             # Kodi not connected, launch a connect task but
             # don't wait more than 5 seconds, then process the command if connected
             # else returns error
-            connect_task = obj.event_loop.create_task(obj.connect())
+            connect_task = obj._event_loop.create_task(obj.connect())
             await asyncio.sleep(0)
             try:
                 async with asyncio.timeout(5):
@@ -79,17 +79,16 @@ def cmd_wrapper(
                 )
                 pass
             else:
-                if not obj._connect_error:
-                    try:
-                        await func(obj, *args, **kwargs)
-                        return ucapi.StatusCodes.OK
-                    except ClientError as exc:
-                        log_function(
-                            "Error calling %s on entity %s: %r trying to reconnect",
-                            func.__name__,
-                            obj.id,
-                            exc,
-                        )
+                try:
+                    await func(obj, *args, **kwargs)
+                    return ucapi.StatusCodes.OK
+                except ClientError as exc:
+                    log_function(
+                        "Error calling %s on entity %s: %r trying to reconnect",
+                        func.__name__,
+                        obj.id,
+                        exc,
+                    )
             return ucapi.StatusCodes.BAD_REQUEST
         except Exception as ex:
             _LOGGER.error(
@@ -165,7 +164,7 @@ class PanasonicBlurayDevice(object):
                     self._reconnect_retry = 0
                     _LOGGER.debug("Device %s is on again", self.id)
             await self.update()
-            await asyncio.sleep(10)
+            await asyncio.sleep(self._device_config.refresh_interval)
 
         self._update_task = None
 
@@ -178,8 +177,6 @@ class PanasonicBlurayDevice(object):
         if self._session is None:
             await self.connect()
         update_data = {}
-        current_state = self.state
-
         status = await self.get_play_status()
 
         if status[0] == "error":

@@ -34,10 +34,12 @@ class SetupSteps(IntEnum):
     """Enumeration of setup steps to keep track of user data responses."""
 
     INIT = 0
-    CONFIGURATION_MODE = 1
-    DISCOVER = 2
-    DEVICE_CHOICE = 3
-    RECONFIGURE = 4
+    WORKFLOW_MODE = 1
+    DEVICE_CONFIGURATION_MODE = 2
+    DISCOVER = 3
+    DEVICE_CHOICE = 4
+    RECONFIGURE = 5
+    BACKUP_RESTORE = 6
 
 
 _setup_step = SetupSteps.INIT
@@ -69,6 +71,7 @@ _user_input_discovery = RequestUserInput(
 )
 
 
+# pylint: disable=R0911
 async def driver_setup_handler(msg: SetupDriver) -> SetupAction:
     """
     Dispatch driver setup requests to corresponding handlers.
@@ -81,33 +84,46 @@ async def driver_setup_handler(msg: SetupDriver) -> SetupAction:
     global _setup_step
     global _cfg_add_device
 
+    _LOG.debug("driver_setup_handler")
+
     if isinstance(msg, DriverSetupRequest):
         _setup_step = SetupSteps.INIT
         _cfg_add_device = False
         return await handle_driver_setup(msg)
     if isinstance(msg, UserDataResponse):
-        _LOG.debug(msg)
-        if _setup_step == SetupSteps.CONFIGURATION_MODE and "action" in msg.input_values:
-            return await handle_configuration_mode(msg)
+        _LOG.debug("Setup handler message : step %s, message : %s", _setup_step, msg)
+        if _setup_step == SetupSteps.WORKFLOW_MODE:
+            if msg.input_values.get("configuration_mode", "") == "normal":
+                _setup_step = SetupSteps.DEVICE_CONFIGURATION_MODE
+                _LOG.debug("Starting normal setup workflow")
+                return _user_input_discovery
+            _LOG.debug("User requested backup/restore of configuration")
+            return await _handle_backup_restore_step()
+        if _setup_step == SetupSteps.DEVICE_CONFIGURATION_MODE:
+            if "action" in msg.input_values:
+                _LOG.debug("Setup flow starts with existing configuration")
+                return await handle_configuration_mode(msg)
+            _LOG.debug("Setup flow configuration mode")
+            return await _handle_discovery(msg)
         if _setup_step == SetupSteps.DISCOVER and "address" in msg.input_values:
             return await _handle_discovery(msg)
         if _setup_step == SetupSteps.DEVICE_CHOICE and "choice" in msg.input_values:
             return await handle_device_choice(msg)
         if _setup_step == SetupSteps.RECONFIGURE:
             return await _handle_device_reconfigure(msg)
+        if _setup_step == SetupSteps.BACKUP_RESTORE:
+            return await _handle_backup_restore(msg)
         _LOG.error("No or invalid user response was received: %s", msg)
     elif isinstance(msg, AbortDriverSetup):
         _LOG.info("Setup was aborted with code: %s", msg.error)
         _setup_step = SetupSteps.INIT
 
-    # user confirmation not used in setup process
-    # if isinstance(msg, UserConfirmationResponse):
-    #     return handle_user_confirmation(msg)
-
     return SetupError()
 
 
-async def handle_driver_setup(_msg: DriverSetupRequest) -> RequestUserInput | SetupError:
+async def handle_driver_setup(
+    _msg: DriverSetupRequest,
+) -> RequestUserInput | SetupError:
     """
     Start driver setup.
 
@@ -119,14 +135,13 @@ async def handle_driver_setup(_msg: DriverSetupRequest) -> RequestUserInput | Se
     """
     global _setup_step
 
-    reconfigure = _msg.reconfigure
-    _LOG.debug("Starting driver setup, reconfigure=%s", reconfigure)
-
     # workaround for web-configurator not picking up first response
     await asyncio.sleep(1)
 
+    reconfigure = _msg.reconfigure
+    _LOG.debug("Starting driver setup, reconfigure=%s", reconfigure)
     if reconfigure:
-        _setup_step = SetupSteps.CONFIGURATION_MODE
+        _setup_step = SetupSteps.DEVICE_CONFIGURATION_MODE
 
         # get all configured devices for the user to choose from
         dropdown_devices = []
@@ -181,11 +196,26 @@ async def handle_driver_setup(_msg: DriverSetupRequest) -> RequestUserInput | Se
             # dummy entry if no devices are available
             dropdown_devices.append({"id": "", "label": {"en": "---"}})
 
+        dropdown_actions.append(
+            {
+                "id": "backup_restore",
+                "label": {
+                    "en": "Backup or restore devices configuration",
+                    "fr": "Sauvegarder ou restaurer la configuration des appareils",
+                },
+            },
+        )
+
         return RequestUserInput(
             {"en": "Configuration mode", "de": "Konfigurations-Modus"},
             [
                 {
-                    "field": {"dropdown": {"value": dropdown_devices[0]["id"], "items": dropdown_devices}},
+                    "field": {
+                        "dropdown": {
+                            "value": dropdown_devices[0]["id"],
+                            "items": dropdown_devices,
+                        }
+                    },
                     "id": "choice",
                     "label": {
                         "en": "Configured devices",
@@ -194,7 +224,12 @@ async def handle_driver_setup(_msg: DriverSetupRequest) -> RequestUserInput | Se
                     },
                 },
                 {
-                    "field": {"dropdown": {"value": dropdown_actions[0]["id"], "items": dropdown_actions}},
+                    "field": {
+                        "dropdown": {
+                            "value": dropdown_actions[0]["id"],
+                            "items": dropdown_actions,
+                        }
+                    },
                     "id": "action",
                     "label": {
                         "en": "Action",
@@ -207,11 +242,45 @@ async def handle_driver_setup(_msg: DriverSetupRequest) -> RequestUserInput | Se
 
     # Initial setup, make sure we have a clean configuration
     config.devices.clear()  # triggers device instance removal
-    _setup_step = SetupSteps.DISCOVER
-    return _user_input_discovery
+    _setup_step = SetupSteps.WORKFLOW_MODE
+    return RequestUserInput(
+        {"en": "Configuration mode", "de": "Konfigurations-Modus"},
+        [
+            {
+                "field": {
+                    "dropdown": {
+                        "value": "normal",
+                        "items": [
+                            {
+                                "id": "normal",
+                                "label": {
+                                    "en": "Start the configuration of the integration",
+                                    "fr": "Démarrer la configuration de l'intégration",
+                                },
+                            },
+                            {
+                                "id": "backup_restore",
+                                "label": {
+                                    "en": "Backup or restore devices configuration",
+                                    "fr": "Sauvegarder ou restaurer la configuration des appareils",
+                                },
+                            },
+                        ],
+                    }
+                },
+                "id": "configuration_mode",
+                "label": {
+                    "en": "Configuration mode",
+                    "fr": "Mode de configuration",
+                },
+            }
+        ],
+    )
 
 
-async def handle_configuration_mode(msg: UserDataResponse) -> RequestUserInput | SetupComplete | SetupError:
+async def handle_configuration_mode(
+    msg: UserDataResponse,
+) -> RequestUserInput | SetupComplete | SetupError:
     """
     Process user data response in a setup process.
 
@@ -227,6 +296,8 @@ async def handle_configuration_mode(msg: UserDataResponse) -> RequestUserInput |
 
     action = msg.input_values["action"]
 
+    _LOG.debug("Handle configuration mode")
+
     # workaround for web-configurator not picking up first response
     await asyncio.sleep(1)
 
@@ -240,8 +311,6 @@ async def handle_configuration_mode(msg: UserDataResponse) -> RequestUserInput |
                 return SetupError(error_type=IntegrationSetupError.OTHER)
             config.devices.store()
             return SetupComplete()
-        case "reset":
-            config.devices.clear()  # triggers device instance removal
         case "configure":
             # Reconfigure device if the identifier has changed
             choice = msg.input_values["choice"]
@@ -272,8 +341,28 @@ async def handle_configuration_mode(msg: UserDataResponse) -> RequestUserInput |
                         },
                         "field": {"checkbox": {"value": _reconfigured_device.always_on}},
                     },
+                    {
+                        "id": "refresh_interval",
+                        "label": {
+                            "en": "Refresh interval (seconds)",
+                            "fr": "Délai de réactualisation",
+                        },
+                        "field": {
+                            "number": {
+                                "value": _reconfigured_device.refresh_interval,
+                                "min": 5,
+                                "max": 120,
+                                "steps": 1,
+                                "decimals": 0,
+                            }
+                        },
+                    },
                 ],
             )
+        case "reset":
+            config.devices.clear()  # triggers device instance removal
+        case "backup_restore":
+            return await _handle_backup_restore_step()
         case _:
             _LOG.error("Invalid configuration action: %s", action)
             return SetupError(error_type=IntegrationSetupError.OTHER)
@@ -296,16 +385,18 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
     global _discovered_devices
 
     _discovered_devices = []
-
     dropdown_items = []
+    _LOG.debug("Handle driver setup with discovery")
+
     address = msg.input_values["address"]
 
+    # pylint: disable = W0718
     if address:
         _LOG.debug("Starting manual driver setup for %s", address)
         try:
             # simple connection check
             device = PanasonicBlurayDevice(device_config=DeviceInstance(id=address,address=address,
-                                                                        name="Panasonic",always_on=False))
+                                                                        name="Panasonic"))
             await device.update()
             if device.state == States.UNKNOWN:
                 _LOG.error("Cannot connect to manually entered address %s", address)
@@ -337,7 +428,12 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
         },
         [
             {
-                "field": {"dropdown": {"value": dropdown_items[0]["id"], "items": dropdown_items}},
+                "field": {
+                    "dropdown": {
+                        "value": dropdown_items[0]["id"],
+                        "items": dropdown_items,
+                    }
+                },
                 "id": "choice",
                 "label": {
                     "en": "Please choose your Panasonic device",
@@ -352,6 +448,14 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
                 },
                 "field": {"checkbox": {"value": False}},
             },
+            {
+                "id": "refresh_interval",
+                "label": {
+                    "en": "Refresh interval (seconds)",
+                    "fr": "Délai de réactualisation",
+                },
+                "field": {"number": {"value": 10, "min": 5, "max": 120, "steps": 1, "decimals": 0}},
+            },
         ],
     )
 
@@ -365,9 +469,14 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     :param msg: response data from the requested user data
     :return: the setup action on how to continue: SetupComplete if a valid AVR device was chosen.
     """
+    # pylint: disable = W0718
     global _discovered_devices
     host = msg.input_values["choice"]
     always_on = msg.input_values.get("always_on") == "true"
+    try:
+        refresh_interval = int(msg.input_values.get("refresh_interval", 10))
+    except ValueError:
+        return SetupError(error_type=IntegrationSetupError.OTHER)
     device_name = "Panasonic"
     if _discovered_devices:
         for device in _discovered_devices:
@@ -378,7 +487,7 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     try:
         # simple connection check
         device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host,
-                                                                    name=device_name,always_on=always_on))
+                                                                    name=device_name))
         await device.update()
         if device.state == States.UNKNOWN:
             _LOG.error("Cannot connect to manually entered address %s", host)
@@ -397,8 +506,12 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
         _LOG.error("Could not get mac address of host %s: required to create a unique device", host)
         return SetupError(error_type=IntegrationSetupError.OTHER)
 
-    config.devices.add(
-        DeviceInstance(id=unique_id, name=device_name, address=host,always_on=always_on)
+    config.devices.add_or_update(
+        DeviceInstance(id=unique_id,
+                       name=device_name,
+                       address=host,
+                       always_on=always_on,
+                       refresh_interval=refresh_interval)
     )  # triggers Panasonic BR instance creation
     config.devices.store()
 
@@ -408,6 +521,38 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
 
     _LOG.info("Setup successfully completed for %s (%s)", identifier, unique_id)
     return SetupComplete()
+
+
+async def _handle_backup_restore_step() -> RequestUserInput:
+    global _setup_step
+
+    _setup_step = SetupSteps.BACKUP_RESTORE
+    current_config = config.devices.export()
+
+    _LOG.debug("Handle backup/restore step")
+
+    return RequestUserInput(
+        {
+            "en": "Backup or restore devices configuration (all existing devices will be removed)",
+            "fr": "Sauvegarder ou restaurer la configuration des appareils (tous les appareils existants seront "
+            "supprimés)",
+        },
+        [
+            {
+                "field": {
+                    "textarea": {
+                        "value": current_config,
+                    }
+                },
+                "id": "config",
+                "label": {
+                    "en": "Devices configuration",
+                    "fr": "Configuration des appareils",
+                },
+            },
+        ],
+    )
+
 
 async def _handle_device_reconfigure(msg: UserDataResponse) -> SetupComplete | SetupError:
     """
@@ -425,13 +570,41 @@ async def _handle_device_reconfigure(msg: UserDataResponse) -> SetupComplete | S
 
     address = msg.input_values.get("address", "")
     always_on = msg.input_values.get("always_on") == "true"
+    try:
+        refresh_interval = int(msg.input_values.get("refresh_interval", 10))
+    except ValueError:
+        return SetupError(error_type=IntegrationSetupError.OTHER)
 
     _LOG.debug("User has changed configuration")
     _reconfigured_device.address = address
     _reconfigured_device.always_on = always_on
+    _reconfigured_device.refresh_interval = refresh_interval
 
     config.devices.add_or_update(_reconfigured_device)  # triggers ATV instance update
     await asyncio.sleep(1)
     _LOG.info("Setup successfully completed for %s", _reconfigured_device.name)
 
+    return SetupComplete()
+
+
+async def _handle_backup_restore(msg: UserDataResponse) -> SetupComplete | SetupError:
+    """
+    Process import of configuration
+
+    :param msg: response data from the requested user data
+    :return: the setup action on how to continue: SetupComplete after updating configuration
+    """
+    # flake8: noqa:F824
+    # pylint: disable=W0602
+    global _reconfigured_device
+
+    _LOG.debug("Handle backup/restore")
+    updated_config = msg.input_values["config"]
+    _LOG.info("Replacing configuration with : %s", updated_config)
+    if not config.devices.import_config(updated_config):
+        _LOG.error("Setup error : unable to import updated configuration %s", updated_config)
+        return SetupError(error_type=IntegrationSetupError.OTHER)
+    _LOG.debug("Configuration imported successfully")
+
+    await asyncio.sleep(1)
     return SetupComplete()
