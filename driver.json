@@ -1,6 +1,6 @@
 {
 	"driver_id": "panasonicbluray_driver",
-	"version": "1.2.0",
+	"version": "1.2.1",
 	"min_core_api": "0.20.0",
 	"name": { "en": "Panasonic Bluray" },
 	"icon": "custom:panasonic.png",
@@ -40,5 +40,5 @@
 			}
 		]
 	},
-	"release_date": "2026-06-01"
+	"release_date": "2026-06-14"
 }
