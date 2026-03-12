@@ -18,7 +18,7 @@ Here are the step by steps patch the firmware
 3. Download the patch files from the post : these files should be unzipped from the VM, not from your PC/Mac
  - Patcher file (ex : Patch-Program169-182.7z) : main patch program
  - `drive.img.gz` : drive image for the USB flashdrive
- - Additional (optional) patch file(s) : for ex `patcher_overlay_V1.35.zip` to improve overlay menus (link at the end of the post)
+ ~~- Additional (optional) patch file(s) : for ex `patcher_overlay_V1.35.zip` to improve overlay menus (link at the end of the post)~~
 4. Open VirtualBox and open the downloaded and unzipped VM `lubuntu.vbox` from step 1 
 5. Modify the VM configuration to add a shared folder between your disk and the VM : in this shared folder you will copy the patcher files
  - Add a shared folder : first field is the folder where your patch files are located on your PC/Mac, second field type in `panasonic` and mounting point field `/panasonic`
