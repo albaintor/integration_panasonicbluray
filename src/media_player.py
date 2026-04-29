@@ -1,7 +1,7 @@
 """
 Media-player entity functions.
 
-:copyright: (c) 2023 by Unfolded Circle ApS.
+:copyright: (c) 2026 by Albaintor inc
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
 
@@ -77,6 +77,7 @@ class PanasonicMediaPlayer(MediaPlayer):
             options=options,
         )
 
+    # pylint: disable=R0911
     async def command(self, cmd_id: str, params: dict[str, Any] | None = None, *, websocket: Any) -> StatusCodes:
         """
         Media-player entity command handler.
@@ -88,93 +89,94 @@ class PanasonicMediaPlayer(MediaPlayer):
         :return: status code of the command request
         """
         _LOG.info("Got %s command request: %s %s", self.id, cmd_id, params)
-
         if self._device is None:
             _LOG.warning("No device instance for entity: %s", self.id)
             return StatusCodes.SERVICE_UNAVAILABLE
-        elif cmd_id == Commands.ON:
-            return await self._device.turn_on()
-        elif cmd_id == Commands.OFF:
-            return await self._device.turn_off()
-        elif cmd_id == Commands.TOGGLE:
-            return await self._device.toggle()
-        elif cmd_id == Commands.CHANNEL_UP:
-            return await self._device.channel_up()
-        elif cmd_id == Commands.CHANNEL_DOWN:
-            return await self._device.channel_down()
-        elif cmd_id == Commands.PLAY_PAUSE:
-            return await self._device.play_pause()
-        elif cmd_id == Commands.STOP:
-            return await self._device.stop()
-        elif cmd_id == Commands.EJECT:
-            return await self._device.eject()
-        elif cmd_id == Commands.FAST_FORWARD:
-            return await self._device.fast_forward()
-        elif cmd_id == Commands.REWIND:
-            return await self._device.rewind()
-        elif cmd_id == Commands.CURSOR_UP:
-            return await self._device.send_key("UP")
-        elif cmd_id == Commands.CURSOR_DOWN:
-            return await self._device.send_key("DOWN")
-        elif cmd_id == Commands.CURSOR_LEFT:
-            return await self._device.send_key("LEFT")
-        elif cmd_id == Commands.CURSOR_RIGHT:
-            return await self._device.send_key("RIGHT")
-        elif cmd_id == Commands.CURSOR_ENTER:
-            return await self._device.send_key("SELECT")
-        elif cmd_id == Commands.BACK:
-            return await self._device.send_key("RETURN")
-        elif cmd_id == Commands.MENU:
-            return await self._device.send_key("MENU")
-        elif cmd_id == Commands.CONTEXT_MENU:
-            return await self._device.send_key("PUPMENU")
-        elif cmd_id == Commands.SETTINGS:
-            return await self._device.send_key("SETUP")
-        elif cmd_id == Commands.HOME:
-            return await self._device.send_key("TITLE")
-        elif cmd_id == Commands.AUDIO_TRACK:
-            return await self._device.send_key("AUDIOSEL")
-        elif cmd_id == Commands.SUBTITLE:
-            return await self._device.send_key("TITLEONOFF")  # CLOSED_CAPTION?
-        elif cmd_id == Commands.DIGIT_0:
-            return await self._device.send_key("D0")
-        elif cmd_id == Commands.DIGIT_1:
-            return await self._device.send_key("D1")
-        elif cmd_id == Commands.DIGIT_2:
-            return await self._device.send_key("D2")
-        elif cmd_id == Commands.DIGIT_3:
-            return await self._device.send_key("D3")
-        elif cmd_id == Commands.DIGIT_4:
-            return await self._device.send_key("D4")
-        elif cmd_id == Commands.DIGIT_5:
-            return await self._device.send_key("D5")
-        elif cmd_id == Commands.DIGIT_6:
-            return await self._device.send_key("D6")
-        elif cmd_id == Commands.DIGIT_7:
-            return await self._device.send_key("D7")
-        elif cmd_id == Commands.DIGIT_8:
-            return await self._device.send_key("D8")
-        elif cmd_id == Commands.DIGIT_9:
-            return await self._device.send_key("D9")
-        elif cmd_id == Commands.INFO:
-            return await self._device.send_key("PLAYBACKINFO")
-        elif cmd_id == Commands.FUNCTION_RED:
-            return await self._device.send_key("RED")
-        elif cmd_id == Commands.FUNCTION_BLUE:
-            return await self._device.send_key("BLUE")
-        elif cmd_id == Commands.FUNCTION_YELLOW:
-            return await self._device.send_key("YELLOW")
-        elif cmd_id == Commands.FUNCTION_GREEN:
-            return await self._device.send_key("GREEN")
-        elif cmd_id == Commands.NEXT:
-            return await self._device.send_key("MNSKIP")
-        elif cmd_id == Commands.PREVIOUS:
-            return await self._device.send_key("MNBACK")
-        elif cmd_id in self.options[Options.SIMPLE_COMMANDS]:
-            return await self._device.send_key(PANASONIC_SIMPLE_COMMANDS[cmd_id])
-        else:
-            return StatusCodes.NOT_IMPLEMENTED
+        match cmd_id:
+            case Commands.ON:
+                return await self._device.turn_on()
+            case Commands.OFF:
+                return await self._device.turn_off()
+            case Commands.TOGGLE:
+                return await self._device.toggle()
+            case Commands.CHANNEL_UP:
+                return await self._device.channel_up()
+            case Commands.CHANNEL_DOWN:
+                return await self._device.channel_down()
+            case Commands.PLAY_PAUSE:
+                return await self._device.play_pause()
+            case Commands.STOP:
+                return await self._device.stop()
+            case Commands.EJECT:
+                return await self._device.eject()
+            case Commands.FAST_FORWARD:
+                return await self._device.fast_forward()
+            case Commands.REWIND:
+                return await self._device.rewind()
+            case Commands.CURSOR_UP:
+                return await self._device.send_key("UP")
+            case Commands.CURSOR_DOWN:
+                return await self._device.send_key("DOWN")
+            case Commands.CURSOR_LEFT:
+                return await self._device.send_key("LEFT")
+            case Commands.CURSOR_RIGHT:
+                return await self._device.send_key("RIGHT")
+            case Commands.CURSOR_ENTER:
+                return await self._device.send_key("SELECT")
+            case Commands.BACK:
+                return await self._device.send_key("RETURN")
+            case Commands.MENU:
+                return await self._device.send_key("MENU")
+            case Commands.CONTEXT_MENU:
+                return await self._device.send_key("PUPMENU")
+            case Commands.SETTINGS:
+                return await self._device.send_key("SETUP")
+            case Commands.HOME:
+                return await self._device.send_key("TITLE")
+            case Commands.AUDIO_TRACK:
+                return await self._device.send_key("AUDIOSEL")
+            case Commands.SUBTITLE:
+                return await self._device.send_key("TITLEONOFF")
+            case Commands.DIGIT_0:
+                return await self._device.send_key("D0")
+            case Commands.DIGIT_1:
+                return await self._device.send_key("D1")
+            case Commands.DIGIT_2:
+                return await self._device.send_key("D2")
+            case Commands.DIGIT_3:
+                return await self._device.send_key("D3")
+            case Commands.DIGIT_4:
+                return await self._device.send_key("D4")
+            case Commands.DIGIT_5:
+                return await self._device.send_key("D5")
+            case Commands.DIGIT_6:
+                return await self._device.send_key("D6")
+            case Commands.DIGIT_7:
+                return await self._device.send_key("D7")
+            case Commands.DIGIT_8:
+                return await self._device.send_key("D8")
+            case Commands.DIGIT_9:
+                return await self._device.send_key("D9")
+            case Commands.INFO:
+                return await self._device.send_key("PLAYBACKINFO")
+            case Commands.FUNCTION_RED:
+                return await self._device.send_key("RED")
+            case Commands.FUNCTION_BLUE:
+                return await self._device.send_key("BLUE")
+            case Commands.FUNCTION_YELLOW:
+                return await self._device.send_key("YELLOW")
+            case Commands.FUNCTION_GREEN:
+                return await self._device.send_key("GREEN")
+            case Commands.NEXT:
+                return await self._device.send_key("MNSKIP")
+            case Commands.PREVIOUS:
+                return await self._device.send_key("MNBACK")
+            case _ if cmd_id in self.options[Options.SIMPLE_COMMANDS]:
+                return await self._device.send_key(PANASONIC_SIMPLE_COMMANDS[cmd_id])
+            case _:
+                return StatusCodes.NOT_IMPLEMENTED
 
+    # pylint: disable=R0801
     def filter_changed_attributes(self, update: dict[str, Any]) -> dict[str, Any]:
         """
         Filter the given attributes and return only the changed values.

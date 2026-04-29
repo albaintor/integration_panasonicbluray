@@ -1,7 +1,7 @@
 """
 Media-player entity functions.
 
-:copyright: (c) 2023 by Unfolded Circle ApS.
+:copyright: (c) 2026 by Albaintor inc
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
 
@@ -58,15 +58,15 @@ class PanasonicRemote(Remote):
             ui_pages=PANASONIC_REMOTE_UI_PAGES,
         )
 
-    def getIntParam(self, param: str, params: dict[str, Any], default: int):
+    def get_int_param(self, param: str, params: dict[str, Any], default: int):
+        """Extract int parameters."""
         # TODO bug to be fixed on UC Core : some params are sent as (empty) strings by remote (hold == "")
         value = params.get(param, default)
         if isinstance(value, str) and len(value) > 0:
             return int(float(value))
-        else:
-            return default
+        return default
 
-    async def command(self, cmd_id: str, params: dict[str, Any] | None = None) -> StatusCodes:
+    async def command(self, cmd_id: str, params: dict[str, Any] | None = None, *, websocket: Any) -> StatusCodes:
         """
         Media-player entity command handler.
 
@@ -82,30 +82,32 @@ class PanasonicRemote(Remote):
             _LOG.warning("No Kodi instance for entity: %s", self.id)
             return StatusCodes.SERVICE_UNAVAILABLE
 
-        repeat = self.getIntParam("repeat", params, 1)
+        repeat = self.get_int_param("repeat", params, 1)
         res = StatusCodes.OK
-        for i in range(0, repeat):
+        for _ in range(0, repeat):
             res = await self.handle_command(cmd_id, params)
         return res
 
     async def handle_command(self, cmd_id: str, params: dict[str, Any] | None = None) -> StatusCodes:
-        hold = self.getIntParam("hold", params, 0)
-        delay = self.getIntParam("delay", params, 0)
+        """Handle remote command."""
+        # pylint: disable=R0911
+        # hold = self.getIntParam("hold", params, 0)
+        delay = self.get_int_param("delay", params, 0)
         command = params.get("command", "")
 
         if command in KEYS:
             return await self._device.send_key(command)
-        elif command in self.options[Options.SIMPLE_COMMANDS]:
+        if command in self.options[Options.SIMPLE_COMMANDS]:
             return await self._device.send_key(PANASONIC_SIMPLE_COMMANDS[command])
-        elif cmd_id == Commands.ON:
+        if cmd_id == Commands.ON:
             return await self._device.turn_on()
-        elif cmd_id == Commands.OFF:
+        if cmd_id == Commands.OFF:
             return await self._device.turn_off()
-        elif cmd_id == Commands.TOGGLE:
+        if cmd_id == Commands.TOGGLE:
             return await self._device.toggle()
-        elif cmd_id == Commands.SEND_CMD:
+        if cmd_id == Commands.SEND_CMD:
             return await self._device.send_key(command)
-        elif cmd_id == Commands.SEND_CMD_SEQUENCE:
+        if cmd_id == Commands.SEND_CMD_SEQUENCE:
             commands = params.get("sequence", [])  # .split(",")
             res = StatusCodes.OK
             for command in commands:
@@ -130,6 +132,7 @@ class PanasonicRemote(Remote):
 
         return attributes
 
+    # pylint: disable=R0801
     def filter_changed_attributes(self, update: dict[str, Any]) -> dict[str, Any]:
         """
         Filter the given attributes and return only the changed values.

@@ -1,7 +1,7 @@
 """
 Setup flow for Panasonic Bluray integration.
 
-:copyright: (c) 2023 by Unfolded Circle ApS.
+:copyright: (c) 2026 by Albaintor inc
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
 
@@ -28,6 +28,8 @@ from config import DeviceInstance
 from const import States
 
 _LOG = logging.getLogger(__name__)
+
+# pylint: disable=W1405,C0103
 
 
 class SetupSteps(IntEnum):
@@ -331,13 +333,18 @@ async def handle_configuration_mode(
                     {
                         "field": {"text": {"value": _reconfigured_device.address}},
                         "id": "address",
-                        "label": {"en": "IP address", "de": "IP-Adresse", "fr": "Adresse IP"},
+                        "label": {
+                            "en": "IP address",
+                            "de": "IP-Adresse",
+                            "fr": "Adresse IP",
+                        },
                     },
                     {
                         "id": "always_on",
                         "label": {
                             "en": "Keep connection alive (faster initialization, but consumes more battery)",
-                            "fr": "Conserver la connexion active (lancement plus rapide, mais consomme plus de batterie)",
+                            "fr": "Conserver la connexion active (lancement plus rapide, mais consomme plus "
+                            "de batterie)",
                         },
                         "field": {"checkbox": {"value": _reconfigured_device.always_on}},
                     },
@@ -453,7 +460,15 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
                     "en": "Refresh interval (seconds)",
                     "fr": "Délai de réactualisation",
                 },
-                "field": {"number": {"value": 10, "min": 5, "max": 120, "steps": 1, "decimals": 0}},
+                "field": {
+                    "number": {
+                        "value": 10,
+                        "min": 5,
+                        "max": 120,
+                        "steps": 1,
+                        "decimals": 0,
+                    }
+                },
             },
         ],
     )
@@ -469,7 +484,6 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     :return: the setup action on how to continue: SetupComplete if a valid AVR device was chosen.
     """
     # pylint: disable = W0718
-    global _discovered_devices
     host = msg.input_values["choice"]
     always_on = msg.input_values.get("always_on") == "true"
     try:
@@ -482,7 +496,7 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
             if device.get("host") == host:
                 device_name = f"{device.get('manufacturer')} {device.get('friendlyName')}"
 
-    _LOG.debug(f"Chosen Panasonic: {device_name} {host}. Trying to connect and retrieve device information...")
+    _LOG.debug("Chosen Panasonic: %s %s. Trying to connect and retrieve device information...", device_name, host)
     try:
         # simple connection check
         device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host, name=device_name))
@@ -501,12 +515,19 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     unique_id = identifier
 
     if unique_id is None:
-        _LOG.error("Could not get mac address of host %s: required to create a unique device", host)
+        _LOG.error(
+            "Could not get mac address of host %s: required to create a unique device",
+            host,
+        )
         return SetupError(error_type=IntegrationSetupError.OTHER)
 
     config.devices.add_or_update(
         DeviceInstance(
-            id=unique_id, name=device_name, address=host, always_on=always_on, refresh_interval=refresh_interval
+            id=unique_id,
+            name=device_name,
+            address=host,
+            always_on=always_on,
+            refresh_interval=refresh_interval,
         )
     )  # triggers Panasonic BR instance creation
     config.devices.store()
@@ -550,7 +571,9 @@ async def _handle_backup_restore_step() -> RequestUserInput:
     )
 
 
-async def _handle_device_reconfigure(msg: UserDataResponse) -> SetupComplete | SetupError:
+async def _handle_device_reconfigure(
+    msg: UserDataResponse,
+) -> SetupComplete | SetupError:
     """
     Process reconfiguration of a registered Android TV device.
 

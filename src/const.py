@@ -1,3 +1,10 @@
+"""
+Constants
+
+:copyright: (c) 2026 by Albaintor inc
+:license: Mozilla Public License Version 2.0, see LICENSE for more details.
+"""
+
 from datetime import timedelta
 
 __version__ = "1.0.0"
@@ -5,7 +12,6 @@ __version__ = "1.0.0"
 from enum import Enum, IntEnum
 
 import ucapi
-from ucapi.media_player import Commands
 from ucapi.ui import Buttons, DeviceButtonMapping, UiPage
 
 
@@ -139,6 +145,8 @@ PANASONIC_SIMPLE_COMMANDS = {
 
 
 class PlayerVariant(Enum):
+    """Player variant."""
+
     AUTO = 1
     BD = 2
     UB = 3

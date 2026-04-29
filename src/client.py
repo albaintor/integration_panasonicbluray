@@ -1,8 +1,15 @@
-#!/usr/bin/env python
+"""
+Client Panasonic Bluray Device
+
+:copyright: (c) 2026 by Albaintor inc
+:license: Mozilla Public License Version 2.0, see LICENSE for more details.
+"""
+
 # coding: utf-8
 import asyncio
 import logging
 from asyncio import CancelledError, Lock
+from datetime import timedelta
 from enum import StrEnum
 from functools import wraps
 from typing import Any, Awaitable, Callable, Concatenate, Coroutine, ParamSpec, TypeVar
@@ -39,29 +46,18 @@ DEFAULT_MEDIA_DURATION = 18000
 
 def has_error(response: Any) -> bool:
     """Returns true if response has an error."""
-    if (
-        response
-        and isinstance(response, list)
-        and len(response) > 0
-        and response[0] == "error"
-    ):
+    if response and isinstance(response, list) and len(response) > 0 and response[0] == "error":
         return True
     return False
 
 
 def cmd_wrapper(
-    func: Callable[
-        Concatenate[_PanasonicDeviceT, _P], Awaitable[ucapi.StatusCodes | list]
-    ],
-) -> Callable[
-    Concatenate[_PanasonicDeviceT, _P], Coroutine[Any, Any, ucapi.StatusCodes | list]
-]:
+    func: Callable[Concatenate[_PanasonicDeviceT, _P], Awaitable[ucapi.StatusCodes | list]],
+) -> Callable[Concatenate[_PanasonicDeviceT, _P], Coroutine[Any, Any, ucapi.StatusCodes | list]]:
     """Catch command exceptions."""
 
     @wraps(func)
-    async def wrapper(
-        obj: _PanasonicDeviceT, *args: _P.args, **kwargs: _P.kwargs
-    ) -> ucapi.StatusCodes:
+    async def wrapper(obj: _PanasonicDeviceT, *args: _P.args, **kwargs: _P.kwargs) -> ucapi.StatusCodes:
         """Wrap all command methods."""
         try:
             res = await func(obj, *args, **kwargs)
@@ -70,7 +66,7 @@ def cmd_wrapper(
                 return ucapi.StatusCodes.BAD_REQUEST
             return ucapi.StatusCodes.OK
         except ClientError as exc:
-            # If Kodi is off, we expect calls to fail.
+            # If device is off, we expect calls to fail.
             if obj.state == States.OFF:
                 log_function = _LOGGER.debug
             else:
@@ -81,32 +77,30 @@ def cmd_wrapper(
                 obj.id,
                 exc,
             )
-            # Kodi not connected, launch a connect task but
+            # Device not connected, launch a connect task but
             # don't wait more than 5 seconds, then process the command if connected
             # else returns error
-            connect_task = obj._event_loop.create_task(
-                obj.connect()
-            )  # pylint: disable=W0212
+            # pylint: disable=W0212
+            connect_task = obj._event_loop.create_task(obj.connect())
             await asyncio.sleep(0)
             try:
                 async with asyncio.timeout(5):
                     await connect_task
             except asyncio.TimeoutError:
                 log_function("Timeout for reconnect, command won't be sent")
-                pass
             else:
                 try:
                     await func(obj, *args, **kwargs)
                     return ucapi.StatusCodes.OK
-                except ClientError as exc:
+                except ClientError as exc2:
                     log_function(
                         "Error calling %s on entity %s: %r trying to reconnect",
                         func.__name__,
                         obj.id,
-                        exc,
+                        exc2,
                     )
             return ucapi.StatusCodes.BAD_REQUEST
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=W0718
             _LOGGER.error("Unknown error %s : %s", func.__name__, ex)
             return ucapi.StatusCodes.BAD_REQUEST
 
@@ -114,8 +108,9 @@ def cmd_wrapper(
 
 
 class PanasonicBlurayDevice:
+    """Panasonic Client"""
+
     def __init__(self, device_config: DeviceInstance, timeout=3, refresh_frequency=60):
-        from datetime import timedelta
 
         self._id = device_config.id
         self._name = device_config.name
@@ -135,12 +130,11 @@ class PanasonicBlurayDevice:
         self._reconnect_retry = 0
 
     async def connect(self):
+        """Connect."""
         if self._session:
             await self._session.close()
             self._session = None
-        session_timeout = aiohttp.ClientTimeout(
-            total=None, sock_connect=self._timeout, sock_read=self._timeout
-        )
+        session_timeout = aiohttp.ClientTimeout(total=None, sock_connect=self._timeout, sock_read=self._timeout)
         self._session = aiohttp.ClientSession(
             headers={"User-Agent": USER_AGENT},
             timeout=session_timeout,
@@ -150,6 +144,7 @@ class PanasonicBlurayDevice:
         await self.start_polling()
 
     async def disconnect(self):
+        """Disconnect."""
         if self._session:
             await self._session.close()
             self._session = None
@@ -177,13 +172,9 @@ class PanasonicBlurayDevice:
                 if self.state == States.OFF:
                     self._reconnect_retry += 1
                     if self._reconnect_retry > CONNECTION_RETRIES:
-                        _LOGGER.debug(
-                            "Stopping update task as the device %s is off", self.id
-                        )
+                        _LOGGER.debug("Stopping update task as the device %s is off", self.id)
                         break
-                    _LOGGER.debug(
-                        "Device %s is off, retry %s", self.id, self._reconnect_retry
-                    )
+                    _LOGGER.debug("Device %s is off, retry %s", self.id, self._reconnect_retry)
                 elif self._reconnect_retry > 0:
                     self._reconnect_retry = 0
                     _LOGGER.debug("Device %s is on again", self.id)
@@ -193,6 +184,7 @@ class PanasonicBlurayDevice:
         self._update_task = None
 
     async def update(self):
+        """Update data from device."""
         if self._update_lock.locked():
             return
 
@@ -250,6 +242,7 @@ class PanasonicBlurayDevice:
                 self.events.emit(Events.UPDATE, self.id, update_data)
 
     async def send_cmd(self, url, data):
+        """Send command to the device."""
         try:
             if self._session is None:
                 await self.connect()
@@ -292,11 +285,12 @@ class PanasonicBlurayDevice:
         return resp
 
     async def get_status(self):
+        """Retrieve the status of the device."""
         # Check the player supports it, return a dummy response if not
         if self._variant == PlayerVariant.UB:
             return ["1", "0", "0", "00000000", "0"]
 
-        url = "http://%s/WAN/%s/%s_ctrl.cgi" % (self._hostname, "dvdr", "dvdr")
+        url = f"http://{self._hostname}/WAN/dvdr/dvdr_ctrl.cgi"
         data = b"cCMD_GET_STATUS.x=100&cCMD_GET_STATUS.y=100"
 
         resp = await self.send_cmd(url, data)
@@ -326,7 +320,8 @@ class PanasonicBlurayDevice:
         return resp[1]
 
     async def get_play_status(self):
-        url = "http://%s/WAN/%s/%s_ctrl.cgi" % (self._hostname, "dvdr", "dvdr")
+        """Retrieve the status of the device."""
+        url = f"http://{self._hostname}/WAN/dvdr/dvdr_ctrl.cgi"
         data = b"cCMD_PST.x=100&cCMD_PST.y=100"
 
         resp = await self.send_cmd(url, data)
@@ -368,48 +363,59 @@ class PanasonicBlurayDevice:
 
     @property
     def id(self):
+        """Device identifier."""
         return self._id
 
     @property
     def state(self) -> States:
+        """Device state."""
         return self._state
 
     @property
     def name(self):
+        """Device name."""
         return self._name
 
     @property
     def media_duration(self):
+        """Media duration."""
         return self._media_duration
 
     @property
     def media_position(self):
+        """Media position."""
         return self._media_position
 
     @property
     def is_on(self):
+        """True if device is on."""
         return self.state in [States.PAUSED, States.STOPPED, States.PLAYING, States.ON]
 
     @cmd_wrapper
     async def send_key(self, key):
+        """Send a key to the device."""
         return await self._send_key(key)
 
     @cmd_wrapper
     async def toggle(self):
+        """Toggle the device."""
         await self._send_key("POWER")
 
     @cmd_wrapper
     async def turn_on(self):
+        """Turn on the device."""
         if not self.is_on:
             await self._send_key("POWER")
 
     @cmd_wrapper
     async def turn_off(self):
+        """Turn off the device."""
         if self.is_on:
             await self._send_key("POWER")
 
     @cmd_wrapper
     async def channel_up(self):
+        """Jump to next chapter."""
         res = await self._send_key("SKIPFWD")
         if not has_error(res):
             asyncio.create_task(self.update())
@@ -417,6 +423,7 @@ class PanasonicBlurayDevice:
 
     @cmd_wrapper
     async def channel_down(self):
+        """Jump to previous chapter."""
         res = await self._send_key("SKIPREV")
         if not has_error(res):
             asyncio.create_task(self.update())
@@ -424,46 +431,60 @@ class PanasonicBlurayDevice:
 
     @cmd_wrapper
     async def play_pause(self):
+        """Play/pause the device."""
         if self.state == States.PLAYING:
+            new_state = States.PAUSED
             res = await self._send_key("PAUSE")
         else:
+            new_state = States.PLAYING
             res = await self._send_key("PLAYBACK")
         if not has_error(res):
+            self._state = new_state
             asyncio.create_task(self.update())
         return res
 
     @cmd_wrapper
     async def play(self):
+        """Play the device."""
         res = await self._send_key("PLAYBACK")
         if not has_error(res):
+            self._state = States.PLAYING
             asyncio.create_task(self.update())
         return res
 
     @cmd_wrapper
     async def pause(self):
+        """Pause the device."""
         res = await self._send_key("PAUSE")
         if not has_error(res):
+            self._state = States.PAUSED
             asyncio.create_task(self.update())
         return res
 
     @cmd_wrapper
     async def stop(self):
+        """Stop the device."""
         res = await self._send_key("STOP")
         if not has_error(res):
+            self._state = States.STOPPED
             asyncio.create_task(self.update())
         return res
 
     @cmd_wrapper
     async def eject(self):
+        """Eject the disc."""
         res = await self._send_key("OP_CL")
         if not has_error(res):
+            self._state = States.STOPPED
             asyncio.create_task(self.update())
         return res
 
     @cmd_wrapper
     async def fast_forward(self):
+        """Fast forward the device."""
         return await self._send_key("CUE")
 
     @cmd_wrapper
     async def rewind(self):
+        """Rewind the device."""
         return await self._send_key("REV")

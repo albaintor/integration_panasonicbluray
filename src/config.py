@@ -1,7 +1,7 @@
 """
 Configuration handling of the integration driver.
 
-:copyright: (c) 2023 by Unfolded Circle ApS.
+:copyright: (c) 2026 by Albaintor inc
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
 
@@ -230,7 +230,9 @@ class Devices:
         # pylint: disable=W0718
         except Exception as ex:
             _LOG.error(
-                "Cannot import the updated configuration %s, keeping existing configuration : %s", updated_config, ex
+                "Cannot import the updated configuration %s, keeping existing configuration : %s",
+                updated_config,
+                ex,
             )
             try:
                 # Restore current configuration

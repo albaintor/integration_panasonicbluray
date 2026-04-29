@@ -1,9 +1,11 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-This module implements a discovery function for Orange TV.
+Discovery module
 
+:copyright: (c) 2026 by Albaintor inc
+:license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
+
+# -*- coding: utf-8 -*-
 
 import asyncio
 import logging
@@ -147,7 +149,7 @@ async def async_send_ssdp_broadcast_ip(ip_addr: str) -> Set[str]:
         _LOGGER.debug("Got %s results after SSDP queries using ip %s", len(protocol.urls), ip_addr)
 
         return protocol.urls
-    except Exception:
+    except Exception:  # pylint: disable=W0718
         return set()
 
 
@@ -195,7 +197,7 @@ def evaluate_scpd_xml(url: str, body: str) -> Optional[Dict]:
         DefusedXmlException,
         ParseError,
         UnicodeDecodeError,
-    ) as err:
+    ):
         # _LOGGER.error("Error occurred during evaluation of SCPD XML from URI %s: %s", url, err)
         return None
 
