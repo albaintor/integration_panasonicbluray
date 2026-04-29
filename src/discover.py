@@ -43,9 +43,7 @@ SCPD_SERIALNUMBER = f"{SCPD_XMLNS}serialNumber"
 SCPD_FRIENDLYNAME = f"{SCPD_XMLNS}friendlyName"
 SCPD_PRESENTATIONURL = f"{SCPD_XMLNS}presentationURL"
 
-SUPPORTED_DEVICETYPES = [
-    "urn:schemas-upnp-org:device:MediaRenderer:1"
-]
+SUPPORTED_DEVICETYPES = ["urn:schemas-upnp-org:device:MediaRenderer:1"]
 
 SUPPORTED_MANUFACTURERS = ["Panasonic"]
 
@@ -105,7 +103,7 @@ async def async_send_ssdp_broadcast() -> Set[str]:
     Returns a set of SCPD XML resource urls for all discovered devices.
     """
     # Send up to three different broadcast messages
-    #TODO get_local_ips raise errors on some VM
+    # TODO get_local_ips raise errors on some VM
     # ips = get_local_ips()
     # Prepare output of responding devices
     urls = set()

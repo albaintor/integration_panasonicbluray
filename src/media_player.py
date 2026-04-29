@@ -8,12 +8,20 @@ Media-player entity functions.
 import logging
 from typing import Any
 
+from ucapi import EntityTypes, MediaPlayer, StatusCodes
+from ucapi.media_player import (
+    Attributes,
+    Commands,
+    DeviceClasses,
+    Features,
+    MediaContentType,
+    Options,
+    States,
+)
+
 import client
 from client import PanasonicBlurayDevice
 from config import DeviceInstance, create_entity_id
-from ucapi import EntityTypes, MediaPlayer, StatusCodes
-from ucapi.media_player import Attributes, Commands, DeviceClasses, Features, States, MediaType, Options
-
 from const import MEDIA_PLAYER_STATE_MAPPING, PANASONIC_SIMPLE_COMMANDS
 
 _LOG = logging.getLogger(__name__)
@@ -50,28 +58,26 @@ class PanasonicMediaPlayer(MediaPlayer):
             Features.COLOR_BUTTONS,
             Features.HOME,
             Features.PREVIOUS,
-            Features.NEXT
+            Features.NEXT,
         ]
         attributes = {
             Attributes.STATE: state_from_device(device.state),
             Attributes.MEDIA_POSITION: device.media_position,
             Attributes.MEDIA_DURATION: device.media_duration,
-            Attributes.MEDIA_TYPE: MediaType.VIDEO,
+            Attributes.MEDIA_TYPE: MediaContentType.VIDEO,
         }
 
-        options = {
-            Options.SIMPLE_COMMANDS: list(PANASONIC_SIMPLE_COMMANDS.keys())
-        }
+        options = {Options.SIMPLE_COMMANDS: list(PANASONIC_SIMPLE_COMMANDS.keys())}
         super().__init__(
             entity_id,
             config_device.name,
             features,
             attributes,
             device_class=DeviceClasses.STREAMING_BOX,
-            options=options
+            options=options,
         )
 
-    async def command(self, cmd_id: str, params: dict[str, Any] | None = None) -> StatusCodes:
+    async def command(self, cmd_id: str, params: dict[str, Any] | None = None, *, websocket: Any) -> StatusCodes:
         """
         Media-player entity command handler.
 

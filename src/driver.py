@@ -13,7 +13,8 @@ import sys
 from typing import Any
 
 import ucapi
-from ucapi.media_player import Attributes as MediaAttr, MediaType
+from ucapi import MediaContentType
+from ucapi.media_player import Attributes as MediaAttr
 
 import client
 import config
@@ -106,11 +107,13 @@ async def on_subscribe_entities(entity_ids: list[str]) -> None:
         if device_id in _configured_devices:
             device = _configured_devices[device_id]
             if isinstance(entity, media_player.PanasonicMediaPlayer):
-                api.configured_entities.update_attributes(entity_id,
-          {ucapi.media_player.Attributes.STATE: media_player.state_from_device(device.state)})
+                api.configured_entities.update_attributes(
+                    entity_id, {ucapi.media_player.Attributes.STATE: media_player.state_from_device(device.state)}
+                )
             if isinstance(entity, remote.PanasonicRemote):
-                api.configured_entities.update_attributes(entity_id,
-          {ucapi.remote.Attributes.STATE: remote.PANASONIC_REMOTE_STATE_MAPPING.get(device.state)})
+                api.configured_entities.update_attributes(
+                    entity_id, {ucapi.remote.Attributes.STATE: remote.PANASONIC_REMOTE_STATE_MAPPING.get(device.state)}
+                )
             continue
 
         device = config.devices.get(device_id)
@@ -165,14 +168,15 @@ async def on_device_connected(device_id: str):
             continue
 
         if configured_entity.entity_type == ucapi.EntityTypes.MEDIA_PLAYER:
-            if (configured_entity.attributes[ucapi.media_player.Attributes.STATE]
-                    == ucapi.media_player.States.UNAVAILABLE):
+            if (
+                configured_entity.attributes[ucapi.media_player.Attributes.STATE]
+                == ucapi.media_player.States.UNAVAILABLE
+            ):
                 api.configured_entities.update_attributes(
                     entity_id, {ucapi.media_player.Attributes.STATE: ucapi.media_player.States.STANDBY}
                 )
         elif configured_entity.entity_type == ucapi.EntityTypes.REMOTE:
-            if (configured_entity.attributes[ucapi.remote.Attributes.STATE]
-                    == ucapi.remote.States.UNAVAILABLE):
+            if configured_entity.attributes[ucapi.remote.Attributes.STATE] == ucapi.remote.States.UNAVAILABLE:
                 api.configured_entities.update_attributes(
                     entity_id, {ucapi.remote.Attributes.STATE: ucapi.remote.States.OFF}
                 )
@@ -246,7 +250,7 @@ async def on_avr_update(device_id: str, update: dict[str, Any] | None) -> None:
             MediaAttr.STATE: device.state,
             MediaAttr.MEDIA_POSITION: device.media_position,
             MediaAttr.MEDIA_DURATION: device.media_duration,
-            MediaAttr.MEDIA_TYPE: MediaType.VIDEO,
+            MediaAttr.MEDIA_TYPE: MediaContentType.VIDEO,
         }
     else:
         _LOG.info("[%s] Panasonic update: %s", device_id, update)
@@ -316,8 +320,7 @@ def _register_available_entities(config_device: config.DeviceInstance, device: P
     """
     # plain and simple for now: only one media_player per AVR device
     # entity = media_player.create_entity(device)
-    entities = [media_player.PanasonicMediaPlayer(config_device, device),
-                remote.PanasonicRemote(config_device, device)]
+    entities = [media_player.PanasonicMediaPlayer(config_device, device), remote.PanasonicRemote(config_device, device)]
     for entity in entities:
         if api.available_entities.contains(entity.id):
             api.available_entities.remove(entity.id)

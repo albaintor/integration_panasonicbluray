@@ -4,15 +4,24 @@ Media-player entity functions.
 :copyright: (c) 2023 by Unfolded Circle ApS.
 :license: Mozilla Public License Version 2.0, see LICENSE for more details.
 """
+
 import asyncio
 import logging
 from typing import Any
 
-from config import create_entity_id, DeviceInstance
-from client import PanasonicBlurayDevice
 from ucapi import EntityTypes, Remote, StatusCodes
-from ucapi.remote import Attributes, Commands, States as RemoteStates, Options, Features
-from const import PANASONIC_REMOTE_BUTTONS_MAPPING, PANASONIC_REMOTE_UI_PAGES, States, KEYS, PANASONIC_SIMPLE_COMMANDS
+from ucapi.remote import Attributes, Commands, Features, Options
+from ucapi.remote import States as RemoteStates
+
+from client import PanasonicBlurayDevice
+from config import DeviceInstance, create_entity_id
+from const import (
+    KEYS,
+    PANASONIC_REMOTE_BUTTONS_MAPPING,
+    PANASONIC_REMOTE_UI_PAGES,
+    PANASONIC_SIMPLE_COMMANDS,
+    States,
+)
 
 _LOG = logging.getLogger(__name__)
 
@@ -23,7 +32,7 @@ PANASONIC_REMOTE_STATE_MAPPING = {
     States.ON: RemoteStates.ON,
     States.PLAYING: RemoteStates.ON,
     States.PAUSED: RemoteStates.ON,
-    States.STOPPED: RemoteStates.ON
+    States.STOPPED: RemoteStates.ON,
 }
 
 
@@ -46,10 +55,10 @@ class PanasonicRemote(Remote):
             attributes=attributes,
             simple_commands=list(PANASONIC_SIMPLE_COMMANDS.keys()),
             button_mapping=PANASONIC_REMOTE_BUTTONS_MAPPING,
-            ui_pages=PANASONIC_REMOTE_UI_PAGES
+            ui_pages=PANASONIC_REMOTE_UI_PAGES,
         )
 
-    def getIntParam(self, param: str, params: dict[str, Any], default:int):
+    def getIntParam(self, param: str, params: dict[str, Any], default: int):
         # TODO bug to be fixed on UC Core : some params are sent as (empty) strings by remote (hold == "")
         value = params.get(param, default)
         if isinstance(value, str) and len(value) > 0:
@@ -75,7 +84,7 @@ class PanasonicRemote(Remote):
 
         repeat = self.getIntParam("repeat", params, 1)
         res = StatusCodes.OK
-        for i in range (0, repeat):
+        for i in range(0, repeat):
             res = await self.handle_command(cmd_id, params)
         return res
 
@@ -97,7 +106,7 @@ class PanasonicRemote(Remote):
         elif cmd_id == Commands.SEND_CMD:
             return await self._device.send_key(command)
         elif cmd_id == Commands.SEND_CMD_SEQUENCE:
-            commands = params.get("sequence", [])#.split(",")
+            commands = params.get("sequence", [])  # .split(",")
             res = StatusCodes.OK
             for command in commands:
                 res = await self.handle_command(Commands.SEND_CMD, {"command": command, "params": params})
@@ -136,6 +145,3 @@ class PanasonicRemote(Remote):
 
         _LOG.debug("PanasonicRemote update attributes %s -> %s", update, attributes)
         return attributes
-
-
-

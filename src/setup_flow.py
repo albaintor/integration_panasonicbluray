@@ -9,10 +9,6 @@ import asyncio
 import logging
 from enum import IntEnum
 
-import config
-import discover
-from client import PanasonicBlurayDevice
-from config import DeviceInstance
 from ucapi import (
     AbortDriverSetup,
     DriverSetupRequest,
@@ -25,6 +21,10 @@ from ucapi import (
     UserDataResponse,
 )
 
+import config
+import discover
+from client import PanasonicBlurayDevice
+from config import DeviceInstance
 from const import States
 
 _LOG = logging.getLogger(__name__)
@@ -395,8 +395,7 @@ async def _handle_discovery(msg: UserDataResponse) -> RequestUserInput | SetupEr
         _LOG.debug("Starting manual driver setup for %s", address)
         try:
             # simple connection check
-            device = PanasonicBlurayDevice(device_config=DeviceInstance(id=address,address=address,
-                                                                        name="Panasonic"))
+            device = PanasonicBlurayDevice(device_config=DeviceInstance(id=address, address=address, name="Panasonic"))
             await device.update()
             if device.state == States.UNKNOWN:
                 _LOG.error("Cannot connect to manually entered address %s", address)
@@ -480,14 +479,13 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
     device_name = "Panasonic"
     if _discovered_devices:
         for device in _discovered_devices:
-            if device.get('host') == host:
+            if device.get("host") == host:
                 device_name = f"{device.get('manufacturer')} {device.get('friendlyName')}"
 
     _LOG.debug(f"Chosen Panasonic: {device_name} {host}. Trying to connect and retrieve device information...")
     try:
         # simple connection check
-        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host,
-                                                                    name=device_name))
+        device = PanasonicBlurayDevice(device_config=DeviceInstance(id=host, address=host, name=device_name))
         await device.update()
         if device.state == States.UNKNOWN:
             _LOG.error("Cannot connect to manually entered address %s", host)
@@ -507,11 +505,9 @@ async def handle_device_choice(msg: UserDataResponse) -> SetupComplete | SetupEr
         return SetupError(error_type=IntegrationSetupError.OTHER)
 
     config.devices.add_or_update(
-        DeviceInstance(id=unique_id,
-                       name=device_name,
-                       address=host,
-                       always_on=always_on,
-                       refresh_interval=refresh_interval)
+        DeviceInstance(
+            id=unique_id, name=device_name, address=host, always_on=always_on, refresh_interval=refresh_interval
+        )
     )  # triggers Panasonic BR instance creation
     config.devices.store()
 
