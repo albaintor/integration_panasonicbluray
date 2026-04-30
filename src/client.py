@@ -128,6 +128,7 @@ class PanasonicBlurayDevice:
         self._update_task = None
         self._update_lock = Lock()
         self._reconnect_retry = 0
+        self._media_position_reset = True
 
     async def connect(self):
         """Connect."""
@@ -183,7 +184,7 @@ class PanasonicBlurayDevice:
 
         self._update_task = None
 
-    async def update(self):
+    async def update(self, update_position=False):
         """Update data from device."""
         if self._update_lock.locked():
             return
@@ -230,13 +231,20 @@ class PanasonicBlurayDevice:
                     self.state, ucapi.media_player.States.UNKNOWN
                 )
 
-            if media_position != self.media_position:
+            # New media
+            if media_position != self.media_position and media_position == 0:
+                self._media_position_reset = True
+
+            if media_position != self.media_position or update_position or self._media_position_reset:
                 self._media_position = media_position
                 update_data[Attributes.MEDIA_POSITION] = self.media_position
 
-            if media_duration != self.media_duration:
+            if media_duration != self.media_duration or update_position or self._media_position_reset:
                 self._media_duration = media_duration
                 update_data[Attributes.MEDIA_DURATION] = self.media_duration
+
+            if self._media_position_reset:
+                self._media_position_reset = False
 
             if update_data:
                 self.events.emit(Events.UPDATE, self.id, update_data)
@@ -440,7 +448,7 @@ class PanasonicBlurayDevice:
             res = await self._send_key("PLAYBACK")
         if not has_error(res):
             self._state = new_state
-            asyncio.create_task(self.update())
+            asyncio.create_task(self.update(update_position=True))
         return res
 
     @cmd_wrapper
@@ -449,7 +457,7 @@ class PanasonicBlurayDevice:
         res = await self._send_key("PLAYBACK")
         if not has_error(res):
             self._state = States.PLAYING
-            asyncio.create_task(self.update())
+            asyncio.create_task(self.update(update_position=True))
         return res
 
     @cmd_wrapper
@@ -458,7 +466,7 @@ class PanasonicBlurayDevice:
         res = await self._send_key("PAUSE")
         if not has_error(res):
             self._state = States.PAUSED
-            asyncio.create_task(self.update())
+            asyncio.create_task(self.update(update_position=True))
         return res
 
     @cmd_wrapper
@@ -467,7 +475,7 @@ class PanasonicBlurayDevice:
         res = await self._send_key("STOP")
         if not has_error(res):
             self._state = States.STOPPED
-            asyncio.create_task(self.update())
+            asyncio.create_task(self.update(update_position=True))
         return res
 
     @cmd_wrapper
@@ -476,7 +484,7 @@ class PanasonicBlurayDevice:
         res = await self._send_key("OP_CL")
         if not has_error(res):
             self._state = States.STOPPED
-            asyncio.create_task(self.update())
+            asyncio.create_task(self.update(update_position=True))
         return res
 
     @cmd_wrapper

@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Black">
-    <option name="sdkName" value="Python 3.11 (integration-panasonicbluray)" />
+    <option name="cmdArguments" value="--line-length 120" />
+    <option name="enabledOnReformat" value="true" />
+    <option name="enabledOnSave" value="true" />
+    <option name="pathToExecutable" value="C:\Users\damie\AppData\Local\Programs\Python\Python313\Scripts\black.exe" />
+    <option name="sdkName" value="Python 3.13" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 (integration-panasonicbluray)" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11 principal" project-jdk-type="Python SDK" />
 </project>
