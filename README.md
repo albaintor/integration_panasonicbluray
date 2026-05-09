@@ -176,48 +176,28 @@ Available commands for remote entity :
 | SKIP_THE_TRAILER | Skip The Trailer   |
 | MIRACAST         | Mirroring          |
 
-## Build self-contained binary for Remote Two
 
-After some tests, turns out python stuff on embedded is a nightmare. So we're better off creating a single binary file
-that has everything in it.
+## Simple commands
 
-To do that, we need to compile it on the target architecture as `pyinstaller` does not support cross compilation.
+Available simple commands 
 
-### x86-64 Linux
+| Command             | Description                      |
+|---------------------|----------------------------------|
+| MENU_HOME           | Home navigation                  |,
+| MODE_STATUS         | Status information               |,
+| MODE_EXIT           | Exit                             |,
+| MENU_NETWORK        | Network menu                     |,
+| MENU_PICTURE        | Picture settings                 |,
+| MENU_PLAYBACKINFO   | Playback information             |,
+| MODE_SUBTITLES      | Toggle subtitles                 |,
+| MODE_CLOSED_CAPTION | Enable closed captions           |,
+| MODE_HDR_PICTURE    | HDR mode                         |,
+| MODE_MIRACAST       | Miracast                         |,
+| MODE_HIGHCLARITY    | High clarity                     |,
+| MODE_SKIP_TRAILER   | Skip the trailer                 |,
+| MODE_SOUNDEFFECT    | Sound effect                     |,
+| MODE_ENABLED        | (re)Eanble recurring update task |,
 
-On x86-64 Linux we need Qemu to emulate the aarch64 target platform:
-
-```bash
-sudo apt install qemu binfmt-support qemu-user-static
-docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
-```
-
-Run pyinstaller:
-
-```shell
-docker run --rm --name builder \
-    --platform=aarch64 \
-    --user=$(id -u):$(id -g) \
-    -v "$PWD":/workspace \
-    docker.io/unfoldedcircle/r2-pyinstaller:3.11.6  \
-    bash -c \
-      "python -m pip install -r requirements.txt && \
-      pyinstaller --clean --onefile --name intg-panasonicbluray intg-panasonicbluray/driver.py"
-```
-
-### aarch64 Linux / Mac
-
-On an aarch64 host platform, the build image can be run directly (and much faster):
-
-```shell
-docker run --rm --name builder \
-    --user=$(id -u):$(id -g) \
-    -v "$PWD":/workspace \
-    docker.io/unfoldedcircle/r2-pyinstaller:3.11.6  \
-    bash -c \
-      "python -m pip install -r requirements.txt && \
-      pyinstaller --clean --onefile --name intg-panasonicbluray intg-panasonicbluray/driver.py"
-```
 
 ## Versioning
 

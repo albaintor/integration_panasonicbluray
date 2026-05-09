@@ -172,7 +172,11 @@ class PanasonicMediaPlayer(MediaPlayer):
             case Commands.PREVIOUS:
                 return await self._device.send_key("MNBACK")
             case _ if cmd_id in self.options[Options.SIMPLE_COMMANDS]:
-                return await self._device.send_key(PANASONIC_SIMPLE_COMMANDS[cmd_id])
+                if cmd_id == "MODE_ENABLED":
+                    await self._device.start_polling()
+                    return StatusCodes.OK
+                else:
+                    return await self._device.send_key(PANASONIC_SIMPLE_COMMANDS[cmd_id])
             case _:
                 return StatusCodes.NOT_IMPLEMENTED
 

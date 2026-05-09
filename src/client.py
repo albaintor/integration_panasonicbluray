@@ -412,14 +412,12 @@ class PanasonicBlurayDevice:
     @cmd_wrapper
     async def turn_on(self):
         """Turn on the device."""
-        if not self.is_on:
-            await self._send_key("POWER")
+        await self._send_key("POWERON")
 
     @cmd_wrapper
     async def turn_off(self):
         """Turn off the device."""
-        if self.is_on:
-            await self._send_key("POWER")
+        await self._send_key("POWEROFF")
 
     @cmd_wrapper
     async def channel_up(self):
