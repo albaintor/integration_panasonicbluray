@@ -10,7 +10,8 @@ import asyncio
 import logging
 import os
 import sys
-from typing import Any
+from enum import Enum
+from typing import Any, Type
 
 import ucapi
 from ucapi import MediaContentType
@@ -156,6 +157,12 @@ async def on_unsubscribe_entities(entity_ids: list[str]) -> None:
             _configured_devices[device_id].events.remove_all_listeners()
 
 
+def filter_attributes(attributes, attribute_type: Type[Enum]) -> dict[str, Any]:
+    """Filter attributes based on an Enum class."""
+    valid_keys = {e.value for e in attribute_type}
+    return {k: v for k, v in attributes.items() if k in valid_keys}
+
+
 async def on_device_connected(device_id: str):
     """Handle AVR connection."""
     _LOG.debug("Device connected: %s", device_id)
@@ -279,7 +286,7 @@ async def on_avr_update(device_id: str, update: dict[str, Any] | None) -> None:
             return
 
         if isinstance(configured_entity, media_player.PanasonicMediaPlayer):
-            attributes = configured_entity.filter_changed_attributes(update)
+            attributes = filter_attributes(update, ucapi.media_player.Attributes)
         elif isinstance(configured_entity, remote.PanasonicRemote):
             attributes = configured_entity.filter_changed_attributes(update)
 

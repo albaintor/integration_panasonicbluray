@@ -176,43 +176,6 @@ class PanasonicMediaPlayer(MediaPlayer):
             case _:
                 return StatusCodes.NOT_IMPLEMENTED
 
-    # pylint: disable=R0801
-    def filter_changed_attributes(self, update: dict[str, Any]) -> dict[str, Any]:
-        """
-        Filter the given attributes and return only the changed values.
-
-        :param update: dictionary with attributes.
-        :return: filtered entity attributes containing changed attributes only.
-        """
-        attributes = {}
-
-        if Attributes.STATE in update:
-            state = update[Attributes.STATE]
-            attributes = self._key_update_helper(Attributes.STATE, state, attributes)
-
-        for attr in [
-            Attributes.MEDIA_POSITION,
-            Attributes.MEDIA_DURATION,
-            Attributes.MEDIA_TYPE,
-        ]:
-            if attr in update:
-                attributes = self._key_update_helper(attr, update[attr], attributes)
-
-        _LOG.debug("MediaPlayer update attributes %s -> %s", update, attributes)
-        return attributes
-
-    def _key_update_helper(self, key: str, value: str | None, attributes):
-        if value is None:
-            return attributes
-
-        if key in self.attributes:
-            if self.attributes[key] != value:
-                attributes[key] = value
-        else:
-            attributes[key] = value
-
-        return attributes
-
 
 def state_from_device(client_state: client.States) -> States:
     """
