@@ -16,7 +16,7 @@ Here are the step by steps patch the firmware
 1. Download the Ubuntu modified virtual machine from the link inside the post : you can also build your own one as described at the [end of this page](#create-own-ubuntu-vm-to-patch-the-player)
 2. Download and install Oracle VirtualBox on your machine
 3. Download the patch files from the post : these files should be unzipped from the VM, not from your PC/Mac
- - Patcher file (ex : Patch-Program169-182.7z) : main patch program
+ - Patcher file (ex : Patch-Program169-182.7z) : main patch program, not available anymore in avforums, check this [url instead](https://www.movieside.de/threads/guide-zum-flashen-der-panasonic-codefree-custom-firmware-ub424-ub824-ub9004-update-1-82.22660/)
  - `drive.img.gz` : drive image for the USB flashdrive
  ~~- Additional (optional) patch file(s) : for ex `patcher_overlay_V1.35.zip` to improve overlay menus (link at the end of the post)~~
 4. Open VirtualBox and open the downloaded and unzipped VM `lubuntu.vbox` from step 1 
