@@ -40,8 +40,9 @@ _PanasonicDeviceT = TypeVar("_PanasonicDeviceT", bound="PanasonicBlurayDevice")
 _P = ParamSpec("_P")
 
 CONNECTION_RETRIES = 10
-
 DEFAULT_MEDIA_DURATION = 18000
+COMMAND_QUEUE_SIZE = 100
+COMMAND_REFRESH_DELAY = 0.75
 
 
 def has_error(response: Any) -> bool:
@@ -125,10 +126,28 @@ class PanasonicBlurayDevice:
         self._variant = PlayerVariant.AUTO
         self._media_position = 0
         self._media_duration = 0
-        self._update_task = None
+        self._update_task: asyncio.Task | None = None
+        self._refresh_task: asyncio.Task | None = None
+        self._command_worker_task: asyncio.Task | None = None
+        self._command_queue: asyncio.Queue[tuple[str, asyncio.Future | None]] = asyncio.Queue(
+            maxsize=COMMAND_QUEUE_SIZE
+        )
+        self._command_active = False
+        self._pending_update_position = False
         self._update_lock = Lock()
+        self._io_lock = Lock()
         self._reconnect_retry = 0
         self._media_position_reset = True
+
+    @property
+    def _commands_pending(self) -> bool:
+        """Return whether a user command is queued or currently being sent."""
+        return self._command_active or not self._command_queue.empty()
+
+    @property
+    def _refresh_pending(self) -> bool:
+        """Return whether a debounced refresh is pending."""
+        return self._refresh_task is not None and not self._refresh_task.done()
 
     async def connect(self):
         """Connect."""
@@ -146,6 +165,16 @@ class PanasonicBlurayDevice:
 
     async def disconnect(self):
         """Disconnect."""
+        tasks = []
+        for task in (self._refresh_task, self._command_worker_task):
+            if task and not task.done():
+                task.cancel()
+                tasks.append(task)
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+        self._refresh_task = None
+        self._command_worker_task = None
+
         if self._session:
             await self._session.close()
             self._session = None
@@ -179,22 +208,30 @@ class PanasonicBlurayDevice:
                 elif self._reconnect_retry > 0:
                     self._reconnect_retry = 0
                     _LOGGER.debug("Device %s is on again", self.id)
-            await self.update()
+
+            # Commands always have priority over status polling. A command also
+            # schedules its own debounced refresh once the user stops pressing keys.
+            if not self._commands_pending and not self._refresh_pending:
+                await self.update()
             await asyncio.sleep(self._device_config.refresh_interval)
 
         self._update_task = None
 
     async def update(self, update_position=False):
         """Update data from device."""
-        if self._update_lock.locked():
+        if self._commands_pending or self._update_lock.locked():
             return
 
         async with self._update_lock:
-            # _LOGGER.debug("Refresh Panasonic data")
-            if self._session is None:
-                await self.connect()
-            update_data = {}
-            status = await self.get_play_status()
+            # Serialize device I/O, but re-check the command queue after waiting
+            # for the lock so a newly queued key can skip this lower-priority poll.
+            async with self._io_lock:
+                if self._commands_pending:
+                    return
+                if self._session is None:
+                    await self.connect()
+                update_data = {}
+                status = await self.get_play_status()
 
             if status[0] == "error":
                 current_state = States.UNAVAILABLE
@@ -249,48 +286,148 @@ class PanasonicBlurayDevice:
             if update_data:
                 self.events.emit(Events.UPDATE, self.id, update_data)
 
-    async def send_cmd(self, url, data):
+    async def send_cmd(self, url, data, fast_response=False):
         """Send command to the device."""
         try:
             if self._session is None:
                 await self.connect()
-            response = await self._session.post(url, data=data)
-        except ClientError:
-            # If we can't reach the device, assume it's off
+
+            async with self._session.post(url, data=data) as response:
+                # Some Panasonic players acknowledge remote-control commands in
+                # the response headers. In that case there is no need to wait for
+                # and parse the response body.
+                if fast_response:
+                    result_header = response.headers.get("X-MEI-RESULT")
+                    if result_header is not None:
+                        if result_header.strip().upper() == "OK":
+                            return ["ok", []]
+                        return ["error", None]
+
+                result = (await response.read()).split(b"\r\n")
+        except (ClientError, asyncio.TimeoutError):
+            # If we can't reach the device, assume it's off.
             return ["off", None]
 
-        result = (await response.read()).split(b"\r\n")
-
         # First line is '00, "", 1' on success.
-        # Error response starts with FE, then some binary data
-        if result[0].split(b",")[0] != b"00":
+        # Error response starts with FE, then some binary data.
+        if not result or result[0].split(b",")[0] != b"00":
             return ["error", None]
 
-        return ["ok", result[1].decode().split(",")]
+        payload = []
+        if len(result) > 1 and result[1]:
+            payload = result[1].decode().split(",")
+        return ["ok", payload]
 
-    async def _send_key(self, key):
-        """Send the supplied keypress to the device"""
-        # Sanity check it's a valid key
+    async def _send_key_now(self, key):
+        """Send a keypress to the device immediately."""
+        # Sanity check it's a valid key.
         if key not in KEYS:
             _LOGGER.info("Key not known, let it go anyway %s", key)
-            # return ['error', None]
 
-        # Check the player supports it
+        # Check the player supports it.
         if self._variant == PlayerVariant.UB:
             return ["error", None]
 
         url = f"http://{self._hostname}/WAN/dvdr/dvdr_ctrl.cgi"
         data = f"cCMD_RC_{key}.x=100&cCMD_RC_{key}.y=100".encode()
 
-        resp = await self.send_cmd(url, data)
-        # If we're auto-detecting player type then assume we're an newer UB
-        # variant if we got an error, and an older BD if it worked
+        async with self._io_lock:
+            resp = await self.send_cmd(url, data, fast_response=True)
+
+        # If we're auto-detecting player type then assume we're a newer UB
+        # variant if we got an error, and an older BD if it worked. Do not
+        # decide the variant when the device is simply unreachable/off.
         if self._variant == PlayerVariant.AUTO:
             if resp[0] == "error":
                 self._variant = PlayerVariant.UB
                 return ["error", None]
-            self._variant = PlayerVariant.BD
+            if resp[0] == "ok":
+                self._variant = PlayerVariant.BD
         return resp
+
+    def _ensure_command_worker(self):
+        """Start the FIFO command worker if needed."""
+        if self._command_worker_task is None or self._command_worker_task.done():
+            self._command_worker_task = self._event_loop.create_task(self._command_worker())
+
+    async def _command_worker(self):
+        """Send queued commands to the player sequentially."""
+        while True:
+            key, result_future = await self._command_queue.get()
+            self._command_active = True
+            try:
+                result = await self._send_key_now(key)
+                if result[0] != "ok":
+                    log_function = _LOGGER.debug if result[0] == "off" else _LOGGER.warning
+                    log_function("Panasonic command %s returned %s", key, result[0])
+                if result_future is not None and not result_future.done():
+                    result_future.set_result(result)
+            except asyncio.CancelledError:
+                if result_future is not None and not result_future.done():
+                    result_future.cancel()
+                raise
+            except Exception as ex:  # pylint: disable=W0718
+                _LOGGER.error("Error sending queued Panasonic command %s: %s", key, ex)
+                if result_future is not None and not result_future.done():
+                    result_future.set_exception(ex)
+            finally:
+                self._command_active = False
+                self._command_queue.task_done()
+                if self._command_queue.empty():
+                    self._schedule_refresh()
+
+    async def _queue_key(self, key, *, wait_for_result=False, update_position=False):
+        """Queue a keypress, optionally waiting for the player acknowledgement."""
+        if self._variant == PlayerVariant.UB:
+            return ["error", None]
+
+        result_future = self._event_loop.create_future() if wait_for_result else None
+        try:
+            self._command_queue.put_nowait((key, result_future))
+        except asyncio.QueueFull:
+            _LOGGER.warning("Panasonic command queue is full, dropping %s", key)
+            return ["error", None]
+
+        self._ensure_command_worker()
+        self._schedule_refresh(update_position=update_position)
+
+        if result_future is not None:
+            return await result_future
+        return ["ok", None]
+
+    def _schedule_refresh(self, update_position=False):
+        """Debounce status refreshes until command activity has stopped."""
+        self._pending_update_position = self._pending_update_position or update_position
+        if self._refresh_task is not None and not self._refresh_task.done():
+            self._refresh_task.cancel()
+        self._refresh_task = self._event_loop.create_task(self._delayed_refresh())
+
+    async def _delayed_refresh(self):
+        """Refresh player state after the command queue has been idle briefly."""
+        current_task = asyncio.current_task()
+        try:
+            await asyncio.sleep(COMMAND_REFRESH_DELAY)
+            while self._commands_pending:
+                await asyncio.sleep(0.05)
+            update_position = self._pending_update_position
+            self._pending_update_position = False
+            await self.update(update_position=update_position)
+        except asyncio.CancelledError:
+            return
+        finally:
+            if self._refresh_task is current_task:
+                self._refresh_task = None
+
+    def _set_optimistic_state(self, state: States):
+        """Immediately expose a predictable command state to the UI."""
+        if self._state == state:
+            return
+        self._state = state
+        self.events.emit(
+            Events.UPDATE,
+            self.id,
+            {Attributes.STATE: MEDIA_PLAYER_STATE_MAPPING.get(state, ucapi.media_player.States.UNKNOWN)},
+        )
 
     async def get_status(self):
         """Retrieve the status of the device."""
@@ -310,13 +447,13 @@ class PanasonicBlurayDevice:
                 return ["1", "0", "0", "00000000", "0"]
             return ["error"]
 
+        if resp[0] == "off":
+            return ["off"]
+
         # If we get here and we're still auto-detecting player type we can
         # assume an older BD variant.
         if self._variant == PlayerVariant.AUTO:
             self._variant = PlayerVariant.BD
-
-        if resp[0] == "off":
-            return ["off"]
 
         # Response is of the form:
         #  2,0,0,248,0,1,8,2,0,00000000
@@ -401,96 +538,86 @@ class PanasonicBlurayDevice:
 
     @cmd_wrapper
     async def send_key(self, key):
-        """Send a key to the device."""
-        return await self._send_key(key)
+        """Queue a key and acknowledge it immediately to keep the remote responsive."""
+        return await self._queue_key(key)
 
     @cmd_wrapper
     async def toggle(self):
         """Toggle the device."""
-        await self._send_key("POWER")
+        return await self._queue_key("POWER", wait_for_result=True)
 
     @cmd_wrapper
     async def turn_on(self):
         """Turn on the device."""
-        await self._send_key("POWERON")
+        return await self._queue_key("POWERON", wait_for_result=True)
 
     @cmd_wrapper
     async def turn_off(self):
         """Turn off the device."""
-        await self._send_key("POWEROFF")
+        return await self._queue_key("POWEROFF", wait_for_result=True)
 
     @cmd_wrapper
     async def channel_up(self):
         """Jump to next chapter."""
-        res = await self._send_key("SKIPFWD")
-        if not has_error(res):
-            asyncio.create_task(self.update())
-        return res
+        return await self._queue_key("SKIPFWD", update_position=True)
 
     @cmd_wrapper
     async def channel_down(self):
         """Jump to previous chapter."""
-        res = await self._send_key("SKIPREV")
-        if not has_error(res):
-            asyncio.create_task(self.update())
-        return res
+        return await self._queue_key("SKIPREV", update_position=True)
 
     @cmd_wrapper
     async def play_pause(self):
         """Play/pause the device."""
         if self.state == States.PLAYING:
             new_state = States.PAUSED
-            res = await self._send_key("PAUSE")
+            key = "PAUSE"
         else:
             new_state = States.PLAYING
-            res = await self._send_key("PLAYBACK")
+            key = "PLAYBACK"
+        res = await self._queue_key(key, update_position=True)
         if not has_error(res):
-            self._state = new_state
-            asyncio.create_task(self.update(update_position=True))
+            self._set_optimistic_state(new_state)
         return res
 
     @cmd_wrapper
     async def play(self):
         """Play the device."""
-        res = await self._send_key("PLAYBACK")
+        res = await self._queue_key("PLAYBACK", update_position=True)
         if not has_error(res):
-            self._state = States.PLAYING
-            asyncio.create_task(self.update(update_position=True))
+            self._set_optimistic_state(States.PLAYING)
         return res
 
     @cmd_wrapper
     async def pause(self):
         """Pause the device."""
-        res = await self._send_key("PAUSE")
+        res = await self._queue_key("PAUSE", update_position=True)
         if not has_error(res):
-            self._state = States.PAUSED
-            asyncio.create_task(self.update(update_position=True))
+            self._set_optimistic_state(States.PAUSED)
         return res
 
     @cmd_wrapper
     async def stop(self):
         """Stop the device."""
-        res = await self._send_key("STOP")
+        res = await self._queue_key("STOP", update_position=True)
         if not has_error(res):
-            self._state = States.STOPPED
-            asyncio.create_task(self.update(update_position=True))
+            self._set_optimistic_state(States.STOPPED)
         return res
 
     @cmd_wrapper
     async def eject(self):
         """Eject the disc."""
-        res = await self._send_key("OP_CL")
+        res = await self._queue_key("OP_CL", update_position=True)
         if not has_error(res):
-            self._state = States.STOPPED
-            asyncio.create_task(self.update(update_position=True))
+            self._set_optimistic_state(States.STOPPED)
         return res
 
     @cmd_wrapper
     async def fast_forward(self):
         """Fast forward the device."""
-        return await self._send_key("CUE")
+        return await self._queue_key("CUE", update_position=True)
 
     @cmd_wrapper
     async def rewind(self):
         """Rewind the device."""
-        return await self._send_key("REV")
+        return await self._queue_key("REV", update_position=True)
