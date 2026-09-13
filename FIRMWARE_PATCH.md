@@ -28,7 +28,11 @@ Here are the step by steps patch the firmware
    <img width="450" height="400" alt="image" src="https://github.com/user-attachments/assets/2170160a-a83f-466a-a2d2-4b1620c17e7d" />
    <br>Unzip the patcher file `Patch-Program...7z` with the file browser or from terminal `7z x <file.7z>`
 7. Where you extracted the patcher, replace the `res/drive.img.gz` file by the one you downloaded in step 3
-8. Insert a USB key and launch `./Patcher` script from the patcher directory
+8. Insert a USB key and launch `./Patcher` script from the patcher directory : you may have to set execution permissions like
+```bash
+chmod +x ./Patcher
+chmod +x ./tools/dburnner
+```
 9. A popup will show up, then select your USB device in the upper right dropdown and click on `Create USB`
    
 <img width="649" height="514" alt="image" src="https://github.com/user-attachments/assets/1ff32caf-3dfe-4c6b-83a2-3017ee6399f0" />
