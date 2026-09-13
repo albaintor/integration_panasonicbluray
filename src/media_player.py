@@ -28,7 +28,7 @@ _LOG = logging.getLogger(__name__)
 
 
 class PanasonicMediaPlayer(MediaPlayer):
-    """Representation of a Sony Media Player entity."""
+    """Representation of a Panasonic Media Player entity."""
 
     def __init__(self, config_device: DeviceInstance, device: PanasonicBlurayDevice):
         """Initialize the class."""
