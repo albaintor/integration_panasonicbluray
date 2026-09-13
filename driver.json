@@ -1,6 +1,6 @@
 {
 	"driver_id": "panasonicbluray_driver",
-	"version": "1.3.2",
+	"version": "1.3.3",
 	"min_core_api": "0.20.0",
 	"name": { "en": "Panasonic Bluray" },
 	"icon": "custom:panasonic.png",
@@ -26,7 +26,7 @@
 				"id": "info",
 				"label": {
 					"en": "Setup process",
-					"de": "Setup Fortschritt",
+					"de": "Integrationssetup",
 					"fr": "Progression de la configuration"
 				},
 				"field": {
@@ -40,5 +40,5 @@
 			}
 		]
 	},
-	"release_date": "2026-05-09"
+	"release_date": "2026-09-13"
 }
