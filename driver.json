@@ -26,7 +26,7 @@
 				"id": "info",
 				"label": {
 					"en": "Setup process",
-					"de": "Integrationssetup",
+					"de": "Setup Fortschritt",
 					"fr": "Progression de la configuration"
 				},
 				"field": {
